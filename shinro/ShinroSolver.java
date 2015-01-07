@@ -1,6 +1,3 @@
-/**
- * 
- */
 package shinro;
 
 import java.util.ArrayList;

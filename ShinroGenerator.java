@@ -1,13 +1,9 @@
-/**
- * 
- */
-package shinro;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Random;
+import shinro.*;
 
 /**
  * @author Joseph Eib
@@ -36,8 +32,8 @@ public class ShinroGenerator {
 	private static final int POPULATIONSIZE = 10;
 	private static final int TOURNAMENTSIZE = 3;
 	private static final int NUMPOINTS = 12;
-	private static final double SYMMETRYRATE = 0.0008;
-	private static final double CLUSTERRATE = 0.0008;
+	private static final double SYMMETRYRATE = 0.0005;
+	private static final double CLUSTERRATE = 0.0005;
 	
 	//other constants
 	private static final int PUZZSIZE = ShinroPuzzle.SIZE;
@@ -130,7 +126,7 @@ public class ShinroGenerator {
 		return elite;
 	}
 	
-	public static void printStatsWritePuzzle(ShinroPuzzle puzzle, 
+	private static void printStatsWritePuzzle(ShinroPuzzle puzzle, 
 			int numGens, double fitness) {
 		String fileString = "shinro";
 		

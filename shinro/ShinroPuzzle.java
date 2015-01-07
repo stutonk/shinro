@@ -1,6 +1,3 @@
-/**
- * 
- */
 package shinro;
 
 import java.util.ArrayList;
@@ -16,7 +13,7 @@ public class ShinroPuzzle implements Cloneable{
 	private int size, numPoints;
 	
 	public static final int SIZE = 8, POINTS = 12;
-	protected static final int EMPTY = 0, POINT = 9, X = -9,
+	public static final int EMPTY = 0, POINT = 9, X = -9,
 			N = 1, NE = 2, E = 3, SE = 4, S = 5, SW = 6, W = 7, NW = 8,
 			n = -1, ne = -2, e = -3, se = -4, s = -5, sw = -6, w = -7, nw = -8;
 	
