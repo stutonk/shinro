@@ -3,7 +3,7 @@ package shinro;
 import java.util.ArrayList;
 
 /**
- * Data structure and methods to represent a Shinro puzzle
+ * Data structure and methods to represent a shinro puzzle
  * @author Joseph Eib
  * @since December 2014
  */

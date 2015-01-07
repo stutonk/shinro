@@ -1,8 +1,11 @@
 package shinro;
 
 /**
- * Data structure to represent a row and column pair (that is, a grid position)
+ * Data structure and methods to represent a row and column pair (a grid position)
+ * <p>
+ * The structure is comprised of two integer values.
  * @author Joseph Eib
+ * @since December, 2014
  */
 public class GridPos {
 	private int row, col;
