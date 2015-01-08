@@ -469,7 +469,6 @@ public class ShinroPuzzle implements Cloneable{
 	 * <p>
 	 * A POINT will increment the relevant row and column header numbers as well as
 	 * numPoints.
-	 * @see ShinroPuzzle#reset()
 	 * @param intMatrix  a two-dimensional array if ints containing values to
 	 * assign to corresponding spaces in the puzzleGrid
 	 */
@@ -485,7 +484,6 @@ public class ShinroPuzzle implements Cloneable{
 				}
 			}
 		}
-		this.reset();
 	}
 	
 	/**

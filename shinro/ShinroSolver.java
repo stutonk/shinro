@@ -3,17 +3,40 @@ package shinro;
 import java.util.ArrayList;
 
 /**
+ * Finds the number and types of moves required to solve a given shinro puzzle
+ * <p>
+ * This is an implementation of the shinro puzzle solver as described in a paper by
+ * David Oranchak. See http://oranchak.com/evostar-paper.pdf for more details.
+ * <p>
+ * The solve method returns an array of integers whose indices represent the
+ * number of moves per difficulty levels found in the puzzle. These difficulty levels
+ * are as follows:
+ * <ul>
+ * <li> 0: Total number of moves
+ * <li> 1: Zero points to place in row or column
+ * <li> 2: Number of unfilled spaces in a row or column equals the number of points
+ * remaining to be found
+ * <li> 3: Only one empty space in the path of an unsatisfied arrow
+ * <li> 4: Only one empty space in row or column with a horizontal or vertical arrow
+ * <li> 5: Number of nonintersecting arrows equal to number of points to find in 
+ * subset of rows or columns
+ * <li> 6: Move based on the pigeonhole principle
+ * <li> 7: Placing a point at a location would cause an arrow to become unsatisfiable
+ * </ul>
  * @author Joseph Eib
  * @since December 2014
  */
-
-//TODO: Remove DEBUG statements, cleanup, comments
 public class ShinroSolver {
 	private ShinroPuzzle puzzle;
 	private int[] numMovesByDifficulty;
 	
-	private static final int DIFFICULTYLEVELS = 8; //TODO: elaborate
+	private static final int DIFFICULTYLEVELS = 8;
 	
+	/**
+	 * Create a new default ShinroSolver instance
+	 * <p>
+	 * This solver's puzzle will be blank and must be set
+	 */
 	public ShinroSolver() {
 		this.puzzle = new ShinroPuzzle();
 		this.numMovesByDifficulty = new int[DIFFICULTYLEVELS];
@@ -22,23 +45,45 @@ public class ShinroSolver {
 		}
 	}
 	
+	/**
+	 * Create a ShinroSolver instance with a specified ShinroPuzzle
+	 * @param puzzle  the puzzle for this puzzle to solve
+	 */
 	public ShinroSolver(ShinroPuzzle puzzle) {
 		this.puzzle = puzzle;
+		this.puzzle.reset();
 		this.numMovesByDifficulty = new int[DIFFICULTYLEVELS];
 		for (int i = 0; i < this.numMovesByDifficulty.length; i++) {
 			this.numMovesByDifficulty[i] = 0;
 		}
 	}
 	
+	/**
+	 * Gets the puzzle field of this ShinroSolver
+	 * @return the ShinroPuzzle referenced by this ShinroSolver's puzzle field
+	 */
 	public ShinroPuzzle getPuzzle() {
 		return this.puzzle;
 	}
 	
+	/**
+	 * Sets the puzzle field of this ShinroSolver
+	 * @param puzzle  the ShinroPuzzle object to set the puzzle field to
+	 */
 	public void setPuzzle(ShinroPuzzle puzzle) {
 		this.puzzle = puzzle;
 	}
 	
-	//returns blank list if not arrow
+	/**
+	 * Gets an ArrayList of the spaces "behind" an arrow
+	 * <p>
+	 * The list goes in the opposite direction that the arrow points.
+	 * If the space in question is not an arrow, an empty ArrayList is returned.
+	 * @param row  the row index of the arrow
+	 * @param col  the column index of the arrow
+	 * @return an ArrayList of GridPos representing the spaces "behind" the specified
+	 * arrow
+	 */
 	private ArrayList<GridPos> getSpacesBehindArrow(int row, int col) {
 		ArrayList<GridPos> myList = new ArrayList<GridPos>();
 		if (!puzzle.isArrow(row, col)) {
@@ -93,6 +138,12 @@ public class ShinroSolver {
 		}		
 	}
 	
+	/**
+	 * GridPos-based convenience method for {@link #getSpacesBehindArrow(int, int)}
+	 * @param pos The GridPos of the specified arrow
+	 * @return an ArrayList of GridPos representing the spaces "behind" the specified
+	 * arrow
+	 */
 	private ArrayList<GridPos> getSpacesBehindArrow(GridPos pos) {
 		return this.getSpacesBehindArrow(pos.getRow(), pos.getCol());
 	}
@@ -109,6 +160,12 @@ public class ShinroSolver {
 		return result;
 	}
 	
+	/**
+	 * Determines whether listA contains listB
+	 * @param listA  the containing list
+	 * @param listB  the contained list 
+	 * @return true if listA contains listB
+	 */
 	private boolean listContainsList(ArrayList<GridPos> listA, 
 			ArrayList<GridPos> listB) {
 		for (GridPos pos : listB) {
@@ -119,6 +176,12 @@ public class ShinroSolver {
 		return true;
 	}
 	
+	/**
+	 * Determines whether or not listA and listB have any intersecting elements
+	 * @param listA  one of the lists to check for intersection
+	 * @param listB  the other list to check for intersection
+	 * @return true of the lists have any intersecting elements
+	 */
 	private boolean listIntersectsList(ArrayList<GridPos> listA, 
 			ArrayList<GridPos> listB) {
 		for (GridPos pos : listA) {
@@ -129,9 +192,14 @@ public class ShinroSolver {
 		return false;
 	}	
 	
-	//may not be most efficient but is correct
-	private void removeIntersecting(ArrayList<GridPos> list) {
-		ArrayList<GridPos> remList = new ArrayList<GridPos>();
+	/**
+	 * Removes arrows from a list that have intersecting empty spaces in their paths
+	 * <p>
+	 * ONLY empty spaces are considered
+	 * @param list  the list to remove intersecting arrows from
+	 */
+	private void removeIntersectingArrows(ArrayList<GridPos> list) {
+		ArrayList<GridPos> removalList = new ArrayList<GridPos>();
 		ArrayList<GridPos> subA = new ArrayList<GridPos>();
 		ArrayList<GridPos> subB = new ArrayList<GridPos>();
 		for (int i = 0; i < list.size(); i++) {
@@ -141,50 +209,62 @@ public class ShinroSolver {
 				subB = puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
 						puzzle.getArrowToEdge(list.get(j)));
 				if (i != j && this.listIntersectsList(subA, subB)) {
-					remList.add(list.get(i));
+					removalList.add(list.get(i));
 				}
 			}
 		}
-		for (GridPos pos : remList) {
+		for (GridPos pos : removalList) {
 			list.remove(pos);
 		}
 	}
 	
+	/**
+	 * Determines the difficulty level of the next move and applies it to the puzzle
+	 * state.
+	 * <p>
+	 * Thus method takes a greedy approach that attempts to make simpler moves first
+	 * and calls methods that change the state of the puzzle.
+	 * @see #findZeroToPlace()
+	 * @see #findNumUnfilledEqRemaining()
+	 * @see #findOneFreeSquare()
+	 * @see #findOneAndHorizOrVert()
+	 * @see #findNonIntersecting()
+	 * @see #findPigeonhole()
+	 * @see #findUnsatisfiable()
+	 * @return the integer value of the next move to be made in the puzzle
+	 */
 	private int nextMove() {
 		if (this.findZeroToPlace()) {
-			//System.out.println("ZTP");
 			return 1; //num Zero to Place
 		}
 		else if (this.findNumUnfilledEqRemaining()) {
-			//System.out.println("UER");
 			return 2; //num Unfilled Eq Remaining
 		}
-		else if (this.findOneFreeSquare()) {
-			//System.out.println("OFS");
-			return 3; //num One Free Square
+		else if (this.findOneFreeSpace()) {
+			return 3; //num One Free Space
 		}
-		else if (this.findOneToPlace()) {
-			//System.out.println("OTP");
+		else if (this.findOneAndHorizOrVert()) {
 			return 4; //num One to Place
 		}
 		else if (this.findNonIntersecting()) {
-			//System.out.println("NI");
 			return 5; //num Non Intersecting
 		}
 		else if (this.findPigeonhole()) {
-			//System.out.println("PH");
 			return 6; //num Pigeonhole
 		}
 		else if (this.findUnsatisfiable()) {
-			//System.out.println("U!");
 			return 7; //num Unsatisfiable
 		}
 		else {
-			//System.out.println("Err: Solver Not Smart Enough =("); //DEBUG
 			return -1;
 		}
 	}
 	
+	/**
+	 * Gets a list of every row index for every GridPos in a list
+	 * @param list  the list to extract the row indices from
+	 * @return an ArrayList of Integers with every row index in the original list
+	 */
 	private ArrayList<Integer> getListOfRows(ArrayList<GridPos> list) {
 		ArrayList<Integer> result = new ArrayList<Integer>();
 		for (GridPos pos : list) {
@@ -193,6 +273,11 @@ public class ShinroSolver {
 		return result;
 	}
 	
+	/**
+	 * Gets a list of every column index for every GridPos in a list
+	 * @param list  the list to extract the row indices from
+	 * @return an ArrayList of Integers with every column index in the original list
+	 */
 	private ArrayList<Integer> getListOfCols(ArrayList<GridPos> list) {
 		ArrayList<Integer> result = new ArrayList<Integer>();
 		for (GridPos pos : list) {
@@ -201,16 +286,35 @@ public class ShinroSolver {
 		return result;
 	}
 	
+	/**
+	 * Calculates the difference between a row's header number and the current number
+	 * of points in the row
+	 * @param row  the row to calculate the difference in
+	 * @return an integer representing the difference between the header and current
+	 * points
+	 */
 	private int calcDiffInRow(int row) {
 		return puzzle.getRowHeaderNum(row) - 
 				puzzle.getTypeInList(ShinroPuzzle.POINT, puzzle.getRow(row)).size();
 	}
 	
+	/**
+	 * Calculates the difference between a column's header number and the current 
+	 * number of points in the row
+	 * @param col  the column to calculate the difference in
+	 * @return an integer representing the difference between the header and current
+	 * points
+	 */
 	private int calcDiffInCol(int col) {
 		return puzzle.getColHeaderNum(col) -
 				puzzle.getTypeInList(ShinroPuzzle.POINT, puzzle.getCol(col)).size();
 	}
 	
+	/**
+	 * Puts Xs in remaining empty spaces of a row of column if there is zero more
+	 * points to place in that row or column
+	 * @return true if a move of this type is located
+	 */
 	private boolean findZeroToPlace() {
 		//first look for 0 row and column header nums
 		ArrayList<GridPos> myList = new ArrayList<GridPos>();
@@ -248,10 +352,11 @@ public class ShinroSolver {
 		return false;
 	}
 	
-	//either do one or do them all
-	//going with do them all for now
-	//in order to do one, just do .get(0) and return true
-	//TODO: I THINK each one of these is "one move"
+	/**
+	 * Puts points in a row or column if the number of empty spaces equals the number
+	 * of remaining points to be placed in that row or column
+	 * @return true if a move of this type is found.
+	 */
 	private boolean findNumUnfilledEqRemaining() {
 		ArrayList<GridPos> myList = new ArrayList<GridPos>();
 		for (int i = 0; i < puzzle.size(); i++) {
@@ -273,16 +378,15 @@ public class ShinroSolver {
 		return false;
 	}
 	
-	private boolean findOneFreeSquare() {
+	/**
+	 * Puts a point where an unsatisfied arrow only has one empty space in its path
+	 * @return true if a move of this type is found
+	 */
+	private boolean findOneFreeSpace() {
 		ArrayList<GridPos> myList = new ArrayList<GridPos>();
-		ArrayList<GridPos> myArrows = 
-				puzzle.getListByType(ShinroPuzzle.N); //all arrows
-		for (GridPos pos : myArrows) {
-			if (puzzle.isSatisfied(pos)) {
-				continue; //skip satisfied arrows
-			}
+		for (GridPos arrow : this.getUnsatisfiedArrows()) {
 			myList = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
-					puzzle.getArrowToEdge(pos));
+					puzzle.getArrowToEdge(arrow));
 			if (myList.size() == 1) {
 				puzzle.putPoint(myList.get(0));
 				return true;
@@ -293,7 +397,12 @@ public class ShinroSolver {
 	
 	//row column row column
 	//unsatisfied arrows only
-	private boolean findOneToPlace() {
+	/**
+	 * Puts Xs in spaces in spaces behind an unsatisfied horizontal or vertical
+	 * arrow when there is only one point remaining to be found in a row or column
+	 * @return true if a move of this type is found
+	 */
+	private boolean findOneAndHorizOrVert() {
 		int i;
 		ArrayList<GridPos> myList = new ArrayList<GridPos>();
 		ArrayList<GridPos> mySpaces = new ArrayList<GridPos>();
@@ -303,9 +412,7 @@ public class ShinroSolver {
 						puzzle.getRow(i)); //any arrow
 				for (GridPos pos : myList) {
 					switch (puzzle.atPos(pos)) {
-					//case e: //pass through
 					case ShinroPuzzle.E: //pass through
-					//case w: //pass through
 					case ShinroPuzzle.W:
 						mySpaces = 
 								puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
@@ -324,9 +431,7 @@ public class ShinroSolver {
 						puzzle.getCol(i)); // any arrow
 				for (GridPos pos : myList) {
 					switch (puzzle.atPos(pos)) {
-					//case n: //pass through
 					case ShinroPuzzle.N: //pass through
-					//case s: //pass through
 					case ShinroPuzzle.S:
 						mySpaces = 
 								puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
@@ -343,84 +448,93 @@ public class ShinroSolver {
 		return false;
 	}
 	
-	/*
-	Let X denote all free positions within some subset of rows (columns) of the
-	puzzle, where |X| > 1. Let n denote the total count of stones remaining to be
-	placed within the rows (columns) of X. Let A denote some subset of unsatisfied
-	arrows of the puzzle. Let us require that each arrow in A has free positions 
-	along its path that are contained entirely within X, and that no arrow in A 
-	has a path whose free positions intersect the free positions in the path of 
-	another arrow in A. Let P denote the set of positions within X that are 
-	covered by the free positions along the paths of every arrow in A. If |A| = n,
-	then we know that all remaining stones must be located somewhere in positions
-	in P. Therefore, no stones will be found in X \ P, and these remaining positions
-	can be marked as filled.
-	*/
+	/**
+	 * Places Xs based on the combinatorial ruling out of possible spaces due to
+	 * nonintersecting arrows.
+	 * <p>
+	 * For some subset "theSubset" of rows or columns, if a set of arrows "arrowSet"
+	 * whose empty spaces are entirely within theSubset can be found and arrowSet's
+	 * cardinality is equal to the number of points left to be found in theSubset,
+	 * then all of the points must be in the path of an arrow in arrowSet. Therefore,
+	 * any empty spaces in theSubset not in arrowSet can be filled with an X.
+	 * @return true if a move of this type is found
+	 */
 	private boolean findNonIntersecting() {
-		ArrayList<GridPos> setX = new ArrayList<GridPos>();
-		ArrayList<GridPos> setA = new ArrayList<GridPos>();
-		ArrayList<GridPos> uArrows = this.getUnsatisfiedArrows();
-		int i, j, n = 0;
+		ArrayList<GridPos> theSubset = new ArrayList<GridPos>();
+		ArrayList<GridPos> arrowSet = new ArrayList<GridPos>();
+		int i, j, remainingInSubset = 0;
 		//every contiguous subset of rows
 		for (j = 0; j < (puzzle.size() - 1); j++) {
-			setX = new ArrayList<GridPos>();
-			setA = new ArrayList<GridPos>();
-			n = 0;
+			theSubset = new ArrayList<GridPos>();
+			arrowSet = new ArrayList<GridPos>();
+			remainingInSubset = 0;
+			//build theSubset
 			for (i = j; i < puzzle.size(); i++) {
-				setX.addAll(
+				theSubset.addAll(
 						puzzle.getTypeInList(
 								ShinroPuzzle.EMPTY,
 								puzzle.getRow(i)
 						)
 				);
-				n += this.calcDiffInRow(i);
-				if (setX.size() <= 1) { //because of the solving algorithm, 
-					continue; 			//this should never happen.
-				}
-				//build setA
-				for (GridPos pos : uArrows) {
-					if (this.listContainsList(setX,
-							puzzle.getTypeInList(ShinroPuzzle.EMPTY,
-									puzzle.getArrowToEdge(pos)))) {
-						setA.add(pos);
-					}
-				}
-				if (setA.size() < n) { //not enough arrows for spaces to fill
+				//find target cardinality
+				remainingInSubset += this.calcDiffInRow(i);
+				//the following condition should always be found by findOneFreeSpace
+				if (theSubset.size() <= 1) { 
 					continue;
 				}
-				if (this.nonIntersectingCommon(n, setX, setA)) {
+				//build arrowSet
+				for (GridPos pos : this.getUnsatisfiedArrows()) {
+					if (this.listContainsList(theSubset,
+							puzzle.getTypeInList(ShinroPuzzle.EMPTY,
+									puzzle.getArrowToEdge(pos)))) {
+						arrowSet.add(pos);
+					}
+				}
+				//if arrowSet cardinality not enough, move on to the next iteration
+				if (arrowSet.size() < remainingInSubset) {
+					continue;
+				}
+				//go to the common method
+				if (this.nonIntersectingCommon(remainingInSubset, theSubset,
+						arrowSet)) {
 					return true;
 				}
 			}
 		}
 		//every contiguous subset of columns
 		for (j = 0; j < (puzzle.size() - 1); j++) {
-			setX = new ArrayList<GridPos>();
-			setA = new ArrayList<GridPos>();
-			n = 0;
+			theSubset = new ArrayList<GridPos>();
+			arrowSet = new ArrayList<GridPos>();
+			remainingInSubset = 0;
+			//build theSubset
 			for (i = j; i < puzzle.size(); i++) {
-				setX.addAll(
+				theSubset.addAll(
 						puzzle.getTypeInList(
 								ShinroPuzzle.EMPTY,
 								puzzle.getCol(i)
 						)
 				);
-				n += this.calcDiffInCol(i);
-				if (setX.size() <= 1) { //because of the solving algorithm, 
-					continue; 			//this should never happen.
-				}
-				//build setA
-				for (GridPos pos : uArrows) {
-					if (this.listContainsList(setX,
-							puzzle.getTypeInList(ShinroPuzzle.EMPTY,
-									puzzle.getArrowToEdge(pos)))) {
-						setA.add(pos);
-					}
-				}
-				if (setA.size() < n) { //not enough arrows for spaces to fill
+				//find target cardinality
+				remainingInSubset += this.calcDiffInCol(i);
+				//the following condition should always be found by findOneFreeSpace
+				if (theSubset.size() <= 1) { 
 					continue;
 				}
-				if (this.nonIntersectingCommon(n, setX, setA)) {
+				//build arrowSet
+				for (GridPos pos : this.getUnsatisfiedArrows()) {
+					if (this.listContainsList(theSubset,
+							puzzle.getTypeInList(ShinroPuzzle.EMPTY,
+									puzzle.getArrowToEdge(pos)))) {
+						arrowSet.add(pos);
+					}
+				}
+				//if arrowSet cardinality not enough, move on to the next iteration
+				if (arrowSet.size() < remainingInSubset) {
+					continue;
+				}
+				//go to the common method
+				if (this.nonIntersectingCommon(remainingInSubset, theSubset,
+						arrowSet)) {
 					return true;
 				}
 			}
@@ -428,28 +542,35 @@ public class ShinroSolver {
 		return false;
 	}
 	
-	private boolean nonIntersectingCommon(int n, ArrayList<GridPos> setX,
-			ArrayList<GridPos> setA) {
-		ArrayList<GridPos> setP = new ArrayList<GridPos>();
+	/**
+	 * Common (for rows or columns) method for {@link #findNonIntersecting()}
+	 * @param remainingInSubset  the number of points remaining to be found in
+	 * theSubset
+	 * @param theSubset  the subset of rows or columns being considered
+	 * @param arrowSet  the set of arrows being considered
+	 * @return true if the conditions mentioned in {@link #findNonIntersecting()}
+	 * have been satisfied
+	 */
+	private boolean nonIntersectingCommon(int remainingInSubset, 
+			ArrayList<GridPos> theSubset, ArrayList<GridPos> arrowSet) {
+		ArrayList<GridPos> spacesInArrowSet = new ArrayList<GridPos>();
 		ArrayList<GridPos> setToX = new ArrayList<GridPos>();
-		this.removeIntersecting(setA);
-		if (n!= 0 && setA.size() == n) { //the move has been found!
+		this.removeIntersectingArrows(arrowSet);
+		if (remainingInSubset != 0 
+				&& arrowSet.size() == remainingInSubset) { //the move has been found!
 			//build setP
-			for (GridPos pos : setA) {
-				for (GridPos p : puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
-						puzzle.getArrowToEdge(pos))) {
-					setP.add(p);
+			for (GridPos arrow : arrowSet) {
+				for (GridPos space : puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
+						puzzle.getArrowToEdge(arrow))) {
+					spacesInArrowSet.add(space);
 				}
 			}
 			//build final set
-			setToX.addAll(setX);
-			for (GridPos pos : setP) {
+			setToX.addAll(theSubset);
+			for (GridPos pos : spacesInArrowSet) {
 				setToX.remove(pos);
 			}
 			if (setToX.size() > 0) {
-				//for (GridPos p : setA) {     //DEBUG
-				//	System.out.print(p + " "); //
-				//}							   //
 				puzzle.fillSpacesWithX(setToX);
 				return true;
 			}
@@ -473,77 +594,66 @@ public class ShinroSolver {
 	one. Once this count reaches m − n, then we know that stones must be located 
 	in any position in X that is not in P.
 	*/
-	
-	//TODO: Some serious cleanup and this method may not be totally correct
+	/**
+	 * Places points based on a combinatorial strategy based on the pigeonhole
+	 * principle
+	 * <p>
+	 * 
+	 * @return
+	 */
 	private boolean findPigeonhole() {		
 		ArrayList<GridPos> arrows = this.getUnsatisfiedArrows();
 		
 		ArrayList<GridPos> setP = new ArrayList<GridPos>();
-		ArrayList<GridPos> setA = new ArrayList<GridPos>();
+		ArrayList<GridPos> arrowSet = new ArrayList<GridPos>();
 		ArrayList<GridPos> spaces = new ArrayList<GridPos>();
-		ArrayList<GridPos> remList = new ArrayList<GridPos>();
-		int i, n, m;
+		ArrayList<GridPos> removalList = new ArrayList<GridPos>();
+		int i, diffInLine, numUnfilledInLine;
 		
 		//columns
 		ArrayList<Integer> rows = new ArrayList<Integer>();
 		
 		for (int x = 0; x < puzzle.size(); x++) {
-			n = this.calcDiffInCol(x);
-			m = puzzle.getTypeInList(ShinroPuzzle.EMPTY, puzzle.getCol(x)).size();
-			if (m > n) {
+			diffInLine = this.calcDiffInCol(x);
+			numUnfilledInLine = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
+					puzzle.getCol(x)).size();
+			if (numUnfilledInLine > diffInLine) {
 				//build setP
 				setP = puzzle.getTypeInList(ShinroPuzzle.EMPTY, puzzle.getCol(x));
 				for (i = setP.size() - 1; i >= 0; i--) {
 					if (this.calcDiffInRow(setP.get(i).getRow()) != 1) {
 						setP.remove(i);
 					}
-				}
-				
-				//System.out.print("Col " + x + " setP: "); //DEBUG
-				//for (GridPos p : setP) {				    //
-				//	System.out.print(p + " ");			    //
-				//}										    //
-				//System.out.println();					    //
-				
-				//build setA
-				setA.clear();
-				setA.addAll(arrows);
-				
+				}				
+				//build arrowSet
+				arrowSet.clear();
+				arrowSet.addAll(arrows);				
 				//remove any A that intersect setP
-				for (i = setA.size() - 1; i >= 0; i--) {
+				for (i = arrowSet.size() - 1; i >= 0; i--) {
 					if (this.listIntersectsList(setP, 
 							puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
-									puzzle.getArrowToEdge(setA.get(i))))) {
-						setA.remove(i);
+									puzzle.getArrowToEdge(arrowSet.get(i))))) {
+						arrowSet.remove(i);
 					}
-				}
-				
+				}				
 				//remove from A arrows whose spaces don't share a row with setP
-				remList.clear();
-				for (GridPos arrow : setA) {
+				removalList.clear();
+				for (GridPos arrow : arrowSet) {
 					spaces = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
 							puzzle.getArrowToEdge(arrow));
 					rows.addAll(this.getListOfRows(spaces));
 					rows.removeAll(this.getListOfRows(setP));
 					if (rows.size() > 0) {
-						remList.add(arrow);
+						removalList.add(arrow);
 					}
 					rows.clear();
 				}
-				setA.removeAll(remList);
-				
+				arrowSet.removeAll(removalList);				
 				//finally, remove any intersecting arrows from A
-				this.removeIntersecting(setA);
-				
-				//System.out.print("Col " + x + " setA: "); //DEBUG
-				//for (GridPos a : setA) {				    //
-				//	System.out.print(a + " ");			    //
-				//}										    //
-				//System.out.println("\nm-n = " + (m - n));	//
-				
+				this.removeIntersectingArrows(arrowSet);				
 				//move on if not enough arrows in A
 				//I think |A| MUST = m - n
-				if (setA.size() < (m - n)) {
+				if (arrowSet.size() < (numUnfilledInLine - diffInLine)) {
 					continue;
 				}
 				
@@ -558,15 +668,13 @@ public class ShinroSolver {
 								)
 						)
 				);
-				for (GridPos arrow : setA) {
+				for (GridPos arrow : arrowSet) {
 					spaces = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
 							puzzle.getArrowToEdge(arrow));
 					rows.removeAll(this.getListOfRows(spaces));
 				}
 				
-				/* 
-				 * To avoid an infinite loop, rows.size must be > 0
-				 */	
+				// To avoid an infinite loop, cols.size must be > 0	
 				if (rows.size() == 0) {
 					continue;
 				}
@@ -583,23 +691,21 @@ public class ShinroSolver {
 						}
 					}
 				}
-				
-				//System.out.println("Col PH"); //DEBUG
-				
 				return true;
 			}
 		}
 		//rows
 		ArrayList<Integer> cols = new ArrayList<Integer>();
 		setP.clear();
-		setA.clear();
-		remList.clear();
+		arrowSet.clear();
+		removalList.clear();
 		spaces.clear();
 		
 		for (int x = 0; x < puzzle.size(); x++) {
-			n = this.calcDiffInRow(x);
-			m = puzzle.getTypeInList(ShinroPuzzle.EMPTY, puzzle.getRow(x)).size();
-			if (m > n) {
+			diffInLine = this.calcDiffInRow(x);
+			numUnfilledInLine = puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
+					puzzle.getRow(x)).size();
+			if (numUnfilledInLine > diffInLine) {
 				//build setP
 				setP = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
 						puzzle.getRow(x));
@@ -607,58 +713,45 @@ public class ShinroSolver {
 					if (this.calcDiffInCol(setP.get(i).getCol()) != 1) {
 						setP.remove(i);
 					}
-				}
-				
-				//System.out.print("Row " + x + " setP: "); //DEBUG
-				//for (GridPos p : setP) {				  //
-				//	System.out.print(p + " ");			  //
-				//}										  //
-				//System.out.println();					  //
-				
-				//build setA
-				setA.clear();
-				setA.addAll(arrows);
+				}				
+				//build arrowSet
+				arrowSet.clear();
+				arrowSet.addAll(arrows);
 				
 				//remove any A that intersect setP
-				for (i = setA.size() - 1; i >= 0; i--) {
+				for (i = arrowSet.size() - 1; i >= 0; i--) {
 					if (this.listIntersectsList(setP, 
 							puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
-									puzzle.getArrowToEdge(setA.get(i))))) {
-						setA.remove(i);
+									puzzle.getArrowToEdge(arrowSet.get(i))))) {
+						arrowSet.remove(i);
 					}
 				}
 				
 				//remove from A arrows whose spaces don't share a row with setP
-				remList.clear();
-				for (GridPos arrow : setA) {
+				removalList.clear();
+				for (GridPos arrow : arrowSet) {
 					spaces = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
 							puzzle.getArrowToEdge(arrow));
 					cols.addAll(this.getListOfCols(spaces));
 					cols.removeAll(this.getListOfCols(setP));
 					if (cols.size() > 0) {
-						remList.add(arrow);
+						removalList.add(arrow);
 					}
 					cols.clear();
 				}
-				setA.removeAll(remList);
+				arrowSet.removeAll(removalList);
 				
 				//finally, remove any intersecting arrows from A
-				this.removeIntersecting(setA);
+				this.removeIntersectingArrows(arrowSet);
 				
-				//System.out.print("Row " + x + " setA: "); //DEBUG
-				//for (GridPos a : setA) {				  //
-				//	System.out.print(a + " ");			  //
-				//}										  //
-				//System.out.println("\nm-n = " + (m - n)); //
-				
-				//move on if not enough arrows in A
-				//perhaps |A| MUST = m - n
-				if (setA.size() < (m - n)) {
+				//move on if not enough arrows in A; perhaps |A| MUST = m - n
+				if (arrowSet.size() < (numUnfilledInLine - diffInLine)) {
 					continue;
-				}
-				
-				//find which spaces need to be marked
-				//this should be any space not covered by one of the arrows
+				}				
+				/* 
+				 * Find which spaces need to be marked this should be any space not
+				 * covered by one of the arrows
+				 */
 				cols.clear();
 				cols.addAll(
 						this.getListOfCols(
@@ -668,25 +761,20 @@ public class ShinroSolver {
 								)
 						)
 				);
-				for (GridPos arrow : setA) {
+				for (GridPos arrow : arrowSet) {
 					spaces = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
 							puzzle.getArrowToEdge(arrow));
 					cols.removeAll(this.getListOfCols(spaces));
-				}
-				
-				/* potentially in here, there could be a scenario where, for example,
+				}				
+				/* 
+				 * potentially in here, there could be a scenario where, for example,
 				 * there are three arrows in A and m-n = 2 and some two of the three
 				 * will satisfy the criteria for the pigeonhole principle
-				 */
-				
-				/* 
-				 * To avoid an infinite loop, cols.size must be > 0
 				 */				
+				// To avoid an infinite loop, cols.size must be > 0		
 				if (cols.size() == 0) {
 					continue;
-				}
-				
-				
+				}				
 				/*
 				 * If one of the empty spaces in column X shares a row with
 				 * the values in rows, mark it as filled.
@@ -699,9 +787,6 @@ public class ShinroSolver {
 						}
 					}
 				}
-				
-				//System.out.println("Row PH"); //DEBUG
-				
 				return true;
 			}
 		}
@@ -716,6 +801,9 @@ public class ShinroSolver {
 	 * put an X at that point. If that doesn't work, then you have to start looking
 	 * for combination scenarios (screw that)
 	 */	
+	/**
+	 * @return
+	 */
 	private boolean findUnsatisfiable() {
 		//For every empty space in puzzle
 		for (GridPos space : puzzle.getListByType(ShinroPuzzle.EMPTY)) {				
@@ -737,10 +825,7 @@ public class ShinroSolver {
 					}
 				}
 				//if the arrow IS unsatisfiable, put an X and return true
-				if (foundUnsatisfiable) {
-					
-					//System.out.println("@: " + space); //DEBUG
-					
+				if (foundUnsatisfiable) {					
 					puzzle.clearSpace(space);
 					puzzle.putX(space);
 					return true;
@@ -752,6 +837,9 @@ public class ShinroSolver {
 		return false;
 	}
 	
+	/**
+	 * @return
+	 */
 	public int[] solve() {
 		int moveDifficulty;
 		boolean solved = false;
@@ -761,27 +849,22 @@ public class ShinroSolver {
 				this.numMovesByDifficulty[moveDifficulty]++;
 				this.numMovesByDifficulty[0]++; //num Total moves
 				
-				//System.out.print(this);									//DEBUG
-				//System.out.println("Mv " + this.numMovesByDifficulty[0] +	//
-				//		": " + moveDifficulty + "\n");						//
-				
 				if (puzzle.verifySolution()) {
 					solved = true;
 				}
 			}
-			else { //there was some kind of error/the puzzle is unsolvable
+			else { //the puzzle is unsolvable
 				break;
 			}
-		}
-		if (solved) {
-			//System.out.println("Puzzle solved!"); //DEBUG
 		}
 		return this.numMovesByDifficulty;
 	}
 	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
 	@Override
 	public String toString() {
 		return puzzle.toString();
-		//and do some more stuff later
 	}
 }

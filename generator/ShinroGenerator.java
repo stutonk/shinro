@@ -102,7 +102,6 @@ public class ShinroGenerator {
 	private static double calcFitness(ShinroPuzzle puzzle) {
 		double fitness = 0;
 		ShinroPuzzle toSolve = puzzle.clone();
-		toSolve.reset();
 		ShinroSolver solver = new ShinroSolver(toSolve);
 		int numMoves[] = solver.solve();
 		
@@ -254,7 +253,6 @@ public class ShinroGenerator {
 						- puzzle.getListByType(ShinroPuzzle.POINT).size())
 				+ countPointlessArrows(puzzle)
 				+ Math.abs((minMoves) - totalMoves);
-				// + countViolatedConstraints(puzzle);
 		if (symmetry) {
 			denominator += countNonsymmetrical(puzzle);
 		}
@@ -280,6 +278,8 @@ public class ShinroGenerator {
 		int noImprovementCount = 0, numGenerations = 0;
 		
 		System.out.println("Generating puzzle...");
+		System.out.println("Target moves: " + minMoves + ", Target difficulty: "
+				+ difficultyFactor);
 		
 		while (true) {
 			prevFitness = newFitness;
@@ -418,24 +418,12 @@ public class ShinroGenerator {
 	 * nonsymmetrical arrows are removed.
 	 * The mutations are as follows:
 	 * <ul>
-	 * <li>
-	 * Iterate through the puzzle and probabilistically mutate spaces
-	 * </li>
-	 * <li>
-	 * Randomly swap up to three pairs of spaces
-	 * </li>
-	 * <li>
-	 * Add an random arrow to a random space
-	 * </li>
-	 * <li>
-	 * Delete an arrow from a random space
-	 * </li>
-	 * <li>
-	 * Add a point to a random space
-	 * </li>
-	 * <li>
-	 * Delete a point from a random space
-	 * </li>
+	 * <li> Iterate through the puzzle and probabilistically mutate spaces
+	 * <li> Randomly swap up to three pairs of spaces
+	 * <li> Add an random arrow to a random space
+	 * <li> Delete an arrow from a random space
+	 * <li> Add a point to a random space
+	 * <li> Delete a point from a random space
 	 * </ul>
 	 * @param puzzle  the puzzle to mutate
 	 * @return the mutated puzzle
@@ -751,7 +739,6 @@ public class ShinroGenerator {
 		
 		System.out.print("Solver info: ");
 		ShinroPuzzle puzzleCopy = puzzle.clone();
-		puzzleCopy.reset();
 		ShinroSolver ss = new ShinroSolver(puzzleCopy);
 		for (Integer i : ss.solve()) {
 			System.out.print(i + " ");
