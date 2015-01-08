@@ -61,7 +61,7 @@ public class GridPos {
 		this.col = col;
 	}
 
-	/* (non-Javadoc)
+	/* In the format "(row, col)"
 	 * @see java.lang.Object#toString()
 	 */
 	@Override

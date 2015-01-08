@@ -578,33 +578,34 @@ public class ShinroSolver {
 		return false;
 	}
 	
-	/*
-	Let X denote a row (column). Let n be the number of stones remaining to be
-	placed in X. Let m > n be the number of unfilled positions in X. Let P be the
-	set of unfilled positions in X, whose column (row) count of remaining stones,
-	less the count of placed stones, is equal to one. A total of m−n positions 
-	along X will be marked as filled. We seek m − n unsatisfied arrows, A, whose
-	paths contain unfilled positions. Let us require that there is no arrow in A
-	whose unfilled positions intersect the unfilled positions of another arrow in
-	A, or whose unfilled positions intersect P. Let us also impose that every 
-	unfilled position represented by A must share the column (row) of a position 
-	in P. Thus, satisfaction of an arrow in A identifies a subset of P in which a 
-	filled position must be located. Let S be the set of all such subsets. Each 
-	time a subset is added to S, the possible stone positions in X is reduced by
-	one. Once this count reaches m − n, then we know that stones must be located 
-	in any position in X that is not in P.
-	*/
 	/**
 	 * Places points based on a combinatorial strategy based on the pigeonhole
 	 * principle
 	 * <p>
-	 * 
-	 * @return
+	 * For any row or column, if the number of free spaces is greater than the
+	 * number of points remaining to be found, make a set of all the spaces whose
+	 * perpendicular element (columns if this is a row, rows if this is a column)
+	 * has only one point to be found. Next, make a set of any arrow whose path of
+	 * empty spaces is entirely in those columns if this is a row or rows if this
+	 * is a column of setPerpWithOne. Arrows in this set cannot intersect 
+	 * setPerpWithOne, nor each other. If the number if arrows in the arrowSet is the
+	 * same as the difference between the number of points remaining to be found and
+	 * the number of free spaces in the row or column, then any space in the row or 
+	 * column that doesn't share a column or row, respectively, with any space 
+	 * covered by one of the arrows must contain a point.
+	 * <p>
+	 * I'm not 100% sure my implementation is accurate but it seems to work fine --
+	 * It seems like there could be some scenario where the number of arrows in the
+	 * arrowSet is greater than the difference between numUnfilledInLine and
+	 * diffInLine where either two arrows cover the same columns (or rows) and don't
+	 * intersect or some subset of the arrows satisfy the criteria. Therefore, I
+	 * have left the condition as |A| > numUnfilledInLine - diffInLine.
+	 * @return true if a move of this type is found
 	 */
 	private boolean findPigeonhole() {		
 		ArrayList<GridPos> arrows = this.getUnsatisfiedArrows();
 		
-		ArrayList<GridPos> setP = new ArrayList<GridPos>();
+		ArrayList<GridPos> setPerpWithOne = new ArrayList<GridPos>();
 		ArrayList<GridPos> arrowSet = new ArrayList<GridPos>();
 		ArrayList<GridPos> spaces = new ArrayList<GridPos>();
 		ArrayList<GridPos> removalList = new ArrayList<GridPos>();
@@ -613,58 +614,56 @@ public class ShinroSolver {
 		//columns
 		ArrayList<Integer> rows = new ArrayList<Integer>();
 		
-		for (int x = 0; x < puzzle.size(); x++) {
-			diffInLine = this.calcDiffInCol(x);
+		for (int line = 0; line < puzzle.size(); line++) {
+			diffInLine = this.calcDiffInCol(line);
 			numUnfilledInLine = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
-					puzzle.getCol(x)).size();
+					puzzle.getCol(line)).size();
 			if (numUnfilledInLine > diffInLine) {
-				//build setP
-				setP = puzzle.getTypeInList(ShinroPuzzle.EMPTY, puzzle.getCol(x));
-				for (i = setP.size() - 1; i >= 0; i--) {
-					if (this.calcDiffInRow(setP.get(i).getRow()) != 1) {
-						setP.remove(i);
+				//build setPerpWithOne
+				setPerpWithOne = puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
+						puzzle.getCol(line));
+				for (i = setPerpWithOne.size() - 1; i >= 0; i--) {
+					if (this.calcDiffInRow(setPerpWithOne.get(i).getRow()) != 1) {
+						setPerpWithOne.remove(i);
 					}
 				}				
 				//build arrowSet
 				arrowSet.clear();
 				arrowSet.addAll(arrows);				
-				//remove any A that intersect setP
+				//remove any A that intersect setPerpWithOne
 				for (i = arrowSet.size() - 1; i >= 0; i--) {
-					if (this.listIntersectsList(setP, 
+					if (this.listIntersectsList(setPerpWithOne, 
 							puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
 									puzzle.getArrowToEdge(arrowSet.get(i))))) {
 						arrowSet.remove(i);
 					}
 				}				
-				//remove from A arrows whose spaces don't share a row with setP
+				//remove arrows whose spaces don't share a row with setPerpWithOne
 				removalList.clear();
 				for (GridPos arrow : arrowSet) {
 					spaces = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
 							puzzle.getArrowToEdge(arrow));
 					rows.addAll(this.getListOfRows(spaces));
-					rows.removeAll(this.getListOfRows(setP));
+					rows.removeAll(this.getListOfRows(setPerpWithOne));
 					if (rows.size() > 0) {
 						removalList.add(arrow);
 					}
 					rows.clear();
 				}
 				arrowSet.removeAll(removalList);				
-				//finally, remove any intersecting arrows from A
-				this.removeIntersectingArrows(arrowSet);				
-				//move on if not enough arrows in A
-				//I think |A| MUST = m - n
+				//finally, remove any intersecting arrows from the arrowSet
+				this.removeIntersectingArrows(arrowSet);							
+				//perhaps |A| MUST = numUnfilledInLine - diffInLine
 				if (arrowSet.size() < (numUnfilledInLine - diffInLine)) {
-					continue;
-				}
-				
-				//find which spaces need to be marked
-				//this should be any empty space in row C not covered by one of the arrows
+					continue; //move on if not enough arrows in the arrowSet
+				}				
+				//Find which spaces must contain a point
 				rows.clear();
 				rows.addAll(
 						this.getListOfRows(
 								puzzle.getTypeInList(
 										ShinroPuzzle.EMPTY,
-										puzzle.getCol(x)
+										puzzle.getCol(line)
 								)
 						)
 				);
@@ -673,19 +672,16 @@ public class ShinroSolver {
 							puzzle.getArrowToEdge(arrow));
 					rows.removeAll(this.getListOfRows(spaces));
 				}
-				
-				// To avoid an infinite loop, cols.size must be > 0	
+				//To avoid an infinite loop, cols.size must be > 0
 				if (rows.size() == 0) {
 					continue;
-				}
-				
-				/*
-				 * If one of the empty spaces in column X shares a row with
-				 * the values in rows, mark it as filled.
+				}				
+				/* If one of the empty spaces in the column shares a row with
+				 * the remaining values in rows, place a point.
 				 */
 				for (Integer row : rows) {
 					for (GridPos pos : puzzle.getTypeInList(ShinroPuzzle.EMPTY,
-							puzzle.getCol(x))) {
+							puzzle.getCol(line))) {
 						if (pos.getRow() == row) {
 							puzzle.putPoint(pos);
 						}
@@ -696,92 +692,85 @@ public class ShinroSolver {
 		}
 		//rows
 		ArrayList<Integer> cols = new ArrayList<Integer>();
-		setP.clear();
+		setPerpWithOne.clear();
 		arrowSet.clear();
 		removalList.clear();
 		spaces.clear();
 		
-		for (int x = 0; x < puzzle.size(); x++) {
-			diffInLine = this.calcDiffInRow(x);
+		for (int line = 0; line < puzzle.size(); line++) {
+			diffInLine = this.calcDiffInRow(line);
 			numUnfilledInLine = puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
-					puzzle.getRow(x)).size();
+					puzzle.getRow(line)).size();
 			if (numUnfilledInLine > diffInLine) {
-				//build setP
-				setP = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
-						puzzle.getRow(x));
-				for (i = setP.size() - 1; i >= 0; i--) {
-					if (this.calcDiffInCol(setP.get(i).getCol()) != 1) {
-						setP.remove(i);
+				//build setPerpWithOne
+				setPerpWithOne = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
+						puzzle.getRow(line));
+				for (i = setPerpWithOne.size() - 1; i >= 0; i--) {
+					if (this.calcDiffInCol(setPerpWithOne.get(i).getCol()) != 1) {
+						setPerpWithOne.remove(i);
 					}
 				}				
 				//build arrowSet
 				arrowSet.clear();
 				arrowSet.addAll(arrows);
 				
-				//remove any A that intersect setP
+				//remove any A that intersect setPerpWithOne
 				for (i = arrowSet.size() - 1; i >= 0; i--) {
-					if (this.listIntersectsList(setP, 
+					if (this.listIntersectsList(setPerpWithOne, 
 							puzzle.getTypeInList(ShinroPuzzle.EMPTY, 
 									puzzle.getArrowToEdge(arrowSet.get(i))))) {
 						arrowSet.remove(i);
 					}
-				}
-				
-				//remove from A arrows whose spaces don't share a row with setP
+				}				
+				//remove arrows whose spaces don't share a row with setPerpWithOne
 				removalList.clear();
 				for (GridPos arrow : arrowSet) {
 					spaces = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
 							puzzle.getArrowToEdge(arrow));
 					cols.addAll(this.getListOfCols(spaces));
-					cols.removeAll(this.getListOfCols(setP));
+					cols.removeAll(this.getListOfCols(setPerpWithOne));
 					if (cols.size() > 0) {
 						removalList.add(arrow);
 					}
 					cols.clear();
 				}
-				arrowSet.removeAll(removalList);
-				
-				//finally, remove any intersecting arrows from A
-				this.removeIntersectingArrows(arrowSet);
-				
-				//move on if not enough arrows in A; perhaps |A| MUST = m - n
+				arrowSet.removeAll(removalList);				
+				//finally, remove any intersecting arrows from the arrowSet
+				this.removeIntersectingArrows(arrowSet);				
+				//perhaps |A| MUST = numUnfilledInLine - diffInLine
 				if (arrowSet.size() < (numUnfilledInLine - diffInLine)) {
-					continue;
+					continue; //move on if not enough arrows in the arrowSet
 				}				
-				/* 
-				 * Find which spaces need to be marked this should be any space not
-				 * covered by one of the arrows
-				 */
+				//Find which spaces must contain a point
 				cols.clear();
 				cols.addAll(
 						this.getListOfCols(
 								puzzle.getTypeInList(
 										ShinroPuzzle.EMPTY,
-										puzzle.getRow(x)
+										puzzle.getRow(line)
 								)
 						)
 				);
+				/* potentially in here, there could be a scenario where, for example,
+				 * there are three arrows in A and numUnfilledInLine - diffInLine = 2
+				 * and some two of the three will satisfy the criteria for the 
+				 * pigeonhole principle. But this method seems to work
+				 */
 				for (GridPos arrow : arrowSet) {
 					spaces = puzzle.getTypeInList(ShinroPuzzle.EMPTY,
 							puzzle.getArrowToEdge(arrow));
 					cols.removeAll(this.getListOfCols(spaces));
-				}				
-				/* 
-				 * potentially in here, there could be a scenario where, for example,
-				 * there are three arrows in A and m-n = 2 and some two of the three
-				 * will satisfy the criteria for the pigeonhole principle
-				 */				
-				// To avoid an infinite loop, cols.size must be > 0		
+				}
+				//To avoid an infinite loop, cols.size must be > 0
 				if (cols.size() == 0) {
-					continue;
+					continue;	
 				}				
-				/*
-				 * If one of the empty spaces in column X shares a row with
-				 * the values in rows, mark it as filled.
+				/* If one of the empty spaces in the row shares a column with
+				 * the values in cols, place a point.
 				 */
 				for (Integer col : cols) {
 					for (GridPos pos : puzzle.getTypeInList(ShinroPuzzle.EMPTY,
-							puzzle.getRow(x))) {
+							puzzle.getRow(line))) {
 						if (pos.getCol() == col) {
 							puzzle.putPoint(pos);
 						}
@@ -793,20 +782,33 @@ public class ShinroSolver {
 		return false;
 	}
 	
-	/* Finding Impossible Scenarios:
-	 * Here's my guess with this: Iterate through unsatisfied arrows and their
-	 * spaces. Place the point at each space and check for an unsatisfiable arrow.
-	 * That is, if set S is the set of spaces for arrow A: if for every space in
-	 * S there is a zero diffInRow or diffInCol, A is unsatisfiable. Then you can
-	 * put an X at that point. If that doesn't work, then you have to start looking
-	 * for combination scenarios (screw that)
-	 */	
 	/**
-	 * @return
+	 * Finds positions that cause an arrow to be unsatisfiable and places an X
+	 * <p>
+	 * This strategy is employed as the "highest difficulty" because of its brute
+	 * force nature. For every empty space in the puzzle not pointed at by some
+	 * arrow, consider if a point was placed in that location. If placing a point 
+	 * there blocks all the spaces in the path of any unsatisfied arrow from being 
+	 * illed, then there must not be a point there and it can be filled with an X.
+	 * <p>
+	 * Note: For simplicity, my implementation just looks at every space regardless
+	 * of being pointed to by some arrow. It's arguable as to whether it would be
+	 * more efficient to first have to filter out
+	 * @return true if a move of this type is found
 	 */
 	private boolean findUnsatisfiable() {
-		//For every empty space in puzzle
-		for (GridPos space : puzzle.getListByType(ShinroPuzzle.EMPTY)) {				
+		ArrayList<GridPos> arrowSpaces = new ArrayList<GridPos>();
+		ArrayList<GridPos> nonArrowSpaces = new ArrayList<GridPos>();
+		for (GridPos arrow : this.getUnsatisfiedArrows()) {
+			for (GridPos space : puzzle.getTypeInList(ShinroPuzzle.EMPTY,
+					puzzle.getArrowToEdge(arrow))) {
+				arrowSpaces.add(space);
+			}
+		}
+		nonArrowSpaces.addAll(puzzle.getListByType(ShinroPuzzle.EMPTY));
+		nonArrowSpaces.removeAll(arrowSpaces);
+		//For every empty space in puzzle not pointed to by some arrow
+		for (GridPos space : nonArrowSpaces) {				
 			//put a point
 			puzzle.putPoint(space);
 			//then, for every unsatisfied arrow
@@ -837,8 +839,26 @@ public class ShinroSolver {
 		return false;
 	}
 	
-	/**
-	 * @return
+	/** Solves the puzzle by employing the strategies described in David Oranchak's
+	 * paper.
+	 * <p>
+	 * The method returns an array if integers whose indices represent the number
+	 * of moves found. These are as follows:
+	 * <ul>
+	 * <li> 0: Total number of moves
+	 * <li> 1: Zero points to place in row or column
+	 * <li> 2: Number of unfilled spaces in a row or column equals the number of points
+	 * remaining to be found
+	 * <li> 3: Only one empty space in the path of an unsatisfied arrow
+	 * <li> 4: Only one empty space in row or column with a horizontal or vertical arrow
+	 * <li> 5: Number of nonintersecting arrows equal to number of points to find in 
+	 * subset of rows or columns
+	 * <li> 6: Move based on the pigeonhole principle
+	 * <li> 7: Placing a point at a location would cause an arrow to become unsatisfiable
+	 * </ul>
+	 * @see #nextMove()
+	 * @return an array of integers representing the total number of moves and
+	 * number of moves of each difficulty.
 	 */
 	public int[] solve() {
 		int moveDifficulty;
@@ -860,7 +880,7 @@ public class ShinroSolver {
 		return this.numMovesByDifficulty;
 	}
 	
-	/* (non-Javadoc)
+	/* Just print the puzzle
 	 * @see java.lang.Object#toString()
 	 */
 	@Override

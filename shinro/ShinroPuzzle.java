@@ -43,7 +43,7 @@ public class ShinroPuzzle implements Cloneable{
 	/**
 	 * Creates a new ShinroPuzzle with the specified layout.
 	 * <p>
-	 * Once the puzzle is initialized, any POINTs are removed by initPuzzle().
+	 * Once the puzzle is initialized, any points are removed by initPuzzle().
 	 * @param intMatrix  the two-dimensional array containing the layout of the
 	 * puzzle.
 	 */
@@ -81,7 +81,7 @@ public class ShinroPuzzle implements Cloneable{
 	
 	/**
 	 * Deletes the contents of a specified space unless it is an arrow
-	 * If the space contains a POINT, then any arrows satisfied by the point will
+	 * If the space contains a point, then any arrows satisfied by the point will
 	 * be unsatisfied.
 	 * <p>
 	 * This method does nothing if the space is already EMPTY
@@ -123,7 +123,7 @@ public class ShinroPuzzle implements Cloneable{
 	 * Tests for logical equality between two ShinroPuzzles
 	 * <p>
 	 * This means an equal puzzle must have the same row and column header numbers
-	 * as well as the same numbers of arrows and POINTS in the same places
+	 * as well as the same numbers of arrows and points in the same places
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
@@ -252,7 +252,7 @@ public class ShinroPuzzle implements Cloneable{
 	}
 	
 	/**
-	 * Gets the number of POINTs in the specified column
+	 * Gets the number of points in the specified column
 	 * @param col  the column whose header number is to be returned
 	 * @return an integer representing the number of points in the column
 	 */
@@ -337,8 +337,8 @@ public class ShinroPuzzle implements Cloneable{
 	}
 	
 	/**
-	 * Gets the number of POINTs the puzzle was initialized with.
-	 * @return the number of POINTs needed to solve this puzzle
+	 * Gets the number of points the puzzle was initialized with.
+	 * @return the number of points needed to solve this puzzle
 	 */
 	public int getNumPoints() {
 		return this.numPoints;
@@ -438,7 +438,7 @@ public class ShinroPuzzle implements Cloneable{
 	}
 	
 	/**
-	 * Gets the number of POINTs in the specified row
+	 * Gets the number of points in the specified row
 	 * @param row  the row whose header number is to be returned
 	 * @return an integer representing the number of points in the row
 	 */
@@ -467,7 +467,7 @@ public class ShinroPuzzle implements Cloneable{
 	/**
 	 * Populates a ShinroPuzzle's spaces based on the content of an integer matrix.
 	 * <p>
-	 * A POINT will increment the relevant row and column header numbers as well as
+	 * A point will increment the relevant row and column header numbers as well as
 	 * numPoints.
 	 * @param intMatrix  a two-dimensional array if ints containing values to
 	 * assign to corresponding spaces in the puzzleGrid
@@ -604,9 +604,9 @@ public class ShinroPuzzle implements Cloneable{
 	}
 	
 	/**
-	 * Places a new POINT at the specified location
+	 * Places a new point at the specified location
 	 * <p> 
-	 * Placing a POINT will satisfy any pointing arrows.
+	 * Placing a point will satisfy any pointing arrows.
 	 * This method does nothing if the specified space contains an arrow.
 	 * @param row  the row index of the space in which to place the point
 	 * @param col  the column index of the space in which to place the point
@@ -632,7 +632,7 @@ public class ShinroPuzzle implements Cloneable{
 	/**
 	 * Places a new X at the specified location
 	 * <p> 
-	 * This method does nothing if the specified space contains a arrow or POINT
+	 * This method does nothing if the specified space contains a arrow or point
 	 * @param row  the row index of the space in which to place the X
 	 * @param col  the column index of the space in which to place the X
 	 */
@@ -682,7 +682,7 @@ public class ShinroPuzzle implements Cloneable{
 	}
 	
 	/**
-	 * Sets the number of POINTs in the specified column
+	 * Sets the number of points in the specified column
 	 * @param col  the column whose header number is to be set
 	 * @param value  the value to set the specified column header
 	 */
@@ -733,7 +733,7 @@ public class ShinroPuzzle implements Cloneable{
 	}
 	
 	/**
-	 * Sets the number of POINTs in the specified row
+	 * Sets the number of points in the specified row
 	 * @param row  the row whose header number is to be set
 	 * @param value  the value to set the specified row header
 	 */
@@ -859,7 +859,7 @@ public class ShinroPuzzle implements Cloneable{
 	/**
 	 * Determines whether or not a ShinroPuzzle is in a solved state
 	 * <p>
-	 * The puzzle is solved if the number of POINTS in each row and column match
+	 * The puzzle is solved if the number of points in each row and column match
 	 * the number in the corresponding row or column header AND all arrows are
 	 * satisfied. As a consequence, puzzles with multiple solutions will be counted
 	 * as solved if the puzzle is in ANY valid solution state.
