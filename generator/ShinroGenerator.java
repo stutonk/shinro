@@ -22,10 +22,9 @@ import shinro.ShinroSolver;
  * 'MOSTMOVES') and the least difficulty factor the generator should select for
  * ('LEASTDIFFUCULY'). Otherwise, you can set 'RANDOMIZEALL' to false and 'minMoves'
  * as well as 'difficultyFactor' can be explicitly set to the desired number of moves
- * and difficulty factor to select for, respectively. See {@link shinro.ShinroSolver}
- * for information about difficulty factor values. Also, if the generator exceeds
- * MAXGENERATIONS and fitness is less than MINFITNESS, then the program will
- * terminate due to lack of productivity.
+ * and difficulty factor to select for, respectively. 'minOfDifficulty' sets the 
+ * target number of moves in the target difficultyFactor. See 
+ * {@link shinro.ShinroSolver} for information about difficulty factor values.
  * <p> 
  * !!! Symmetry and clustering are currently disabled !!!
  * The generator will randomly enforce symmetry and clustering based on the
@@ -40,8 +39,11 @@ import shinro.ShinroSolver;
  */
 public class ShinroGenerator {
 	// general generator parameters
-	private static int minMoves = 30;	
-	private static int maxNoImprovement = 500; //should make this some function
+	private static int minMoves = 32;		
+	private static int difficultyFactor = 5;
+	private static int minOfDifficulty = 1;
+	
+	private static int maxNoImprovement = 500; //should make this some function	
 	private static final double MINFITNESS = 0.75;
 	
 	//private static boolean symmetry = false;      //DISABLED
@@ -53,8 +55,7 @@ public class ShinroGenerator {
 	private static boolean clusterArrows = false;
 	
 	//fitness function parameters
-	private static int difficultyFactor = 6;
-	private static int minOfDifficultyFactor = 2; //TODO: document
+	
 	
 	//automation constants
 	private static final boolean RANDOMIZEALL = false;
@@ -273,7 +274,7 @@ public class ShinroGenerator {
 						- puzzle.getListByType(ShinroPuzzle.POINT).size())
 				+ countPointlessArrows(puzzle)
 				+ Math.abs((minMoves) - solverInfo[0])
-				+ Math.abs(minOfDifficultyFactor - solverInfo[difficultyFactor]);
+				+ Math.abs(minOfDifficulty - solverInfo[difficultyFactor]);
 		/*if (symmetry) {
 			denominator += countNonsymmetrical(puzzle);
 		}*/
@@ -305,7 +306,7 @@ public class ShinroGenerator {
 		System.out.println("Generating puzzle...");
 		System.out.println("Target moves: " + minMoves + ", Target difficulty: "
 				+ difficultyFactor + ", Target # of diffFactor moves: " 
-				+ minOfDifficultyFactor);
+				+ minOfDifficulty);
 		
 		while (true) {
 			prevFitness = newFitness;
@@ -448,7 +449,7 @@ public class ShinroGenerator {
 			difficultyFactor = rand.nextInt((ShinroSolver.ARRAYSIZE - 1) //7 diffs 
 					- LEASTDIFFICULTY) + LEASTDIFFICULTY;
 			if (difficultyFactor > 4) {
-				minOfDifficultyFactor = rand.nextInt((MINOFDIFFICULTYCAP - 1) + 1) 
+				minOfDifficulty = rand.nextInt((MINOFDIFFICULTYCAP - 1) + 1) 
 						+ 1;
 			}
 		}
@@ -789,7 +790,7 @@ public class ShinroGenerator {
 		
 		System.out.println("\n" + puzzle);
 		System.out.println("Min moves: " + minMoves + ", Difficulty factor: "
-				+ difficultyFactor + ", Target Diff Moves: " + minOfDifficultyFactor);
+				+ difficultyFactor + ", Target Diff Moves: " + minOfDifficulty);
 		System.out.println("Total generations: " + numGens);
 		fileString += String.format("%dg_", numGens);
 		/*if (symmetry) {

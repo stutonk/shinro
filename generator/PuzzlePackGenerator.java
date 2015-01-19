@@ -34,6 +34,32 @@ import shinro.ShinroSolver;
 public class PuzzlePackGenerator {
 	
 	private static String packName = "Default Pack";
+	
+	/* This is just a one-shot inner class for facilitating the ease of sorting
+	 * the puzzles by difficulty. Nothing to see here!
+	 */
+	private static class PuzzleInfo implements Comparable<PuzzleInfo> {
+		int difficulty;
+		String puzzleString;
+		
+		public PuzzleInfo(int difficulty, String puzzleString) {
+			this.difficulty = difficulty;
+			this.puzzleString = puzzleString;
+		}
+
+		@Override
+		public int compareTo(PuzzleInfo arg0) {
+			if (this.difficulty == arg0.difficulty) {
+				return 0;
+			}
+			else if (this.difficulty > arg0.difficulty) {
+				return 1;
+			}
+			else {
+				return -1;
+			}
+		}		
+	}
 
 	/**
 	 * PuzzlePackGenerator entry point.
@@ -84,7 +110,6 @@ public class PuzzlePackGenerator {
 			ArrayList<PuzzleInfo> packPuzzles = new ArrayList<PuzzleInfo>();
 			
 		    for (File puzzle : puzzles) {
-		    	//writer.println("p# " + puzzleCount++); //increments PuzzleCount
 		    	Scanner reader = new Scanner(puzzle);
 		    	String puzzleString = reader.nextLine();
 		    	
@@ -131,21 +156,8 @@ public class PuzzlePackGenerator {
 		    			/ solverInfo[0]; // divided by totalNumMoves		    	
 		    	difficulty = (int)(Math.round(difficultyQuotient / 500 * 100));
 		    	
-		    	/*
-		    	//DEBUG
-		    	System.out.println(difficulty);		    	
-		    	if (difficulty == 0) {
-		    		for (Integer i : solverInfo) {
-		    			System.out.print(i + " ");
-		    		}
-		    		System.out.println();
-		    	}
-		    	//END DEBUG
-		    	*/
-		    	
 		    	packPuzzles.add(new PuzzleInfo(difficulty, puzzleString));
 		    	
-		    	//writer.println(puzzleString);
 		    	reader.close();
 		    }
 		    //Sort the list of puzzles based on difficulty and insert into pack
@@ -164,28 +176,5 @@ public class PuzzlePackGenerator {
 		catch (IOException e) {
 			System.out.println("IO Error: " + e.getMessage());
 		}
-	}
-	
-	private static class PuzzleInfo implements Comparable<PuzzleInfo> {
-		int difficulty;
-		String puzzleString;
-		
-		public PuzzleInfo(int difficulty, String puzzleString) {
-			this.difficulty = difficulty;
-			this.puzzleString = puzzleString;
-		}
-
-		@Override
-		public int compareTo(PuzzleInfo arg0) {
-			if (this.difficulty == arg0.difficulty) {
-				return 0;
-			}
-			else if (this.difficulty > arg0.difficulty) {
-				return 1;
-			}
-			else {
-				return -1;
-			}
-		}		
 	}
 }
