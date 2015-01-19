@@ -1,7 +1,7 @@
 shinro
 ======
 
-##A Java project for a Shinro puzzle (and puzzle pack) generator and game library
+##A Shinro game library and puzzle (pack) generator in Java
 
 ###General Instructions:
 1. git clone https://github.com/stutonk/shinro.git
