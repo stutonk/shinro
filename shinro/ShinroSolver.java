@@ -22,7 +22,9 @@ import java.util.ArrayList;
  * subset of rows or columns
  * <li> 6: Move based on the pigeonhole principle
  * <li> 7: Placing a point at a location would cause an arrow to become unsatisfiable
- * </ul>
+ * <li> The last one: A ridiculous hack where it is indicated by either a zero or one
+ * whether or not the solver has actually solved the puzzle
+ * </ul> 
  * @author Joseph Eib
  * @since December 2014
  */
@@ -30,7 +32,8 @@ public class ShinroSolver {
 	private ShinroPuzzle puzzle;
 	private int[] numMovesByDifficulty;
 	
-	private static final int DIFFICULTYLEVELS = 8;
+	private static final int DIFFICULTYLEVELS = 7;
+	public static final int ARRAYSIZE = DIFFICULTYLEVELS + 2;
 	
 	/**
 	 * Create a new default ShinroSolver instance
@@ -39,7 +42,7 @@ public class ShinroSolver {
 	 */
 	public ShinroSolver() {
 		this.puzzle = new ShinroPuzzle();
-		this.numMovesByDifficulty = new int[DIFFICULTYLEVELS];
+		this.numMovesByDifficulty = new int[ARRAYSIZE];
 		for (int i = 0; i < this.numMovesByDifficulty.length; i++) {
 			this.numMovesByDifficulty[i] = 0;
 		}
@@ -52,7 +55,7 @@ public class ShinroSolver {
 	public ShinroSolver(ShinroPuzzle puzzle) {
 		this.puzzle = puzzle;
 		this.puzzle.reset();
-		this.numMovesByDifficulty = new int[DIFFICULTYLEVELS];
+		this.numMovesByDifficulty = new int[ARRAYSIZE];
 		for (int i = 0; i < this.numMovesByDifficulty.length; i++) {
 			this.numMovesByDifficulty[i] = 0;
 		}
@@ -847,14 +850,19 @@ public class ShinroSolver {
 	 * <ul>
 	 * <li> 0: Total number of moves
 	 * <li> 1: Zero points to place in row or column
-	 * <li> 2: Number of unfilled spaces in a row or column equals the number of points
-	 * remaining to be found
+	 * <li> 2: Number of unfilled spaces in a row or column equals the number of 
+	 * points remaining to be found
 	 * <li> 3: Only one empty space in the path of an unsatisfied arrow
-	 * <li> 4: Only one empty space in row or column with a horizontal or vertical arrow
+	 * <li> 4: Only one empty space in row or column with a horizontal or vertical 
+	 * arrow
 	 * <li> 5: Number of nonintersecting arrows equal to number of points to find in 
 	 * subset of rows or columns
 	 * <li> 6: Move based on the pigeonhole principle
-	 * <li> 7: Placing a point at a location would cause an arrow to become unsatisfiable
+	 * <li> 7: Placing a point at a location would cause an arrow to become 
+	 * unsatisfiable
+	 * <li> The last one: A ridiculous hack where it is indicated by either a zero 
+	 * or one
+ *   * whether or not the solver has actually solved the puzzle
 	 * </ul>
 	 * @see #nextMove()
 	 * @return an array of integers representing the total number of moves and
@@ -865,12 +873,14 @@ public class ShinroSolver {
 		boolean solved = false;
 		while (!solved) {
 			moveDifficulty = this.nextMove();
+			//System.out.println(this);  //uncomment for debug
 			if (moveDifficulty > 0) {
 				this.numMovesByDifficulty[moveDifficulty]++;
 				this.numMovesByDifficulty[0]++; //num Total moves
 				
 				if (puzzle.verifySolution()) {
-					solved = true;
+					this.numMovesByDifficulty[this.numMovesByDifficulty.length - 1] 
+							= 1;
 				}
 			}
 			else { //the puzzle is unsolvable

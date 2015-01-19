@@ -23,8 +23,11 @@ import shinro.ShinroSolver;
  * ('LEASTDIFFUCULY'). Otherwise, you can set 'RANDOMIZEALL' to false and 'minMoves'
  * as well as 'difficultyFactor' can be explicitly set to the desired number of moves
  * and difficulty factor to select for, respectively. See {@link shinro.ShinroSolver}
- * for information about difficulty factor values. 
+ * for information about difficulty factor values. Also, if the generator exceeds
+ * MAXGENERATIONS and fitness is less than MINFITNESS, then the program will
+ * terminate due to lack of productivity.
  * <p> 
+ * !!! Symmetry and clustering are currently disabled !!!
  * The generator will randomly enforce symmetry and clustering based on the
  * 'SYMMETRYRATE' the 'CLUSTERRATE' unless one of the associated parameters is 
  * explicitly set. When explicitly setting 'symmetry,' don't forget to also set 
@@ -37,35 +40,50 @@ import shinro.ShinroSolver;
  */
 public class ShinroGenerator {
 	// general generator parameters
-	private static int minMoves = 25;	
-	private static int maxNoImprovement = 300; //should make this some function
+	private static int minMoves = 30;	
+	private static int maxNoImprovement = 500; //should make this some function
+	private static final double MINFITNESS = 0.75;
 	
-	private static boolean symmetry = false;
-	private static boolean xAxis = false;
-	private static boolean yAxis = false;
-	private static boolean rotational = false;
+	//private static boolean symmetry = false;      //DISABLED
+	//private static boolean xAxis = false;			//
+	//private static boolean yAxis = false;			//
+	//private static boolean rotational = false;	//
 	
 	private static boolean cluster = false;
 	private static boolean clusterArrows = false;
 	
 	//fitness function parameters
-	private static int difficultyFactor = 5;
+	private static int difficultyFactor = 6;
+	private static int minOfDifficultyFactor = 2; //TODO: document
 	
 	//automation constants
-	private static final boolean RANDOMIZEALL = true; //minMoves and difficultyFactor
-	private static final int LEASTMOVES = 15;
-	private static final int MOSTMOVES = 40;
+	private static final boolean RANDOMIZEALL = false;
+	private static final int LEASTMOVES = 18;
+	private static final int MOSTMOVES = 35;
 	private static final int LEASTDIFFICULTY = 4; //oneToPlace moves
+	private static final int MINOFDIFFICULTYCAP = 4;
 	
 	//constraint constants
 	private static final int POPULATIONSIZE = 10;
 	private static final int TOURNAMENTSIZE = 3;
 	private static final int NUMPOINTS = 12;
-	private static final double SYMMETRYRATE = 0.0007;
-	private static final double CLUSTERRATE = 0.0007;
+	//private static final double SYMMETRYRATE = 0f;  //DISABLED
+	//private static final double CLUSTERRATE = 0f;   //DISABLED
 	
 	//other constants
 	private static final int PUZZSIZE = ShinroPuzzle.SIZE;
+	
+	//fitness class
+	private static class Fitness {
+		double value;
+		int[] solverInfo;
+		
+		public Fitness() {
+			this.value = 0f;
+			this.solverInfo = new int[ShinroSolver.ARRAYSIZE];
+		}
+		
+	}
 	
 	/**
 	 * Method which calculates the clustering function for a given puzzle
@@ -99,17 +117,17 @@ public class ShinroGenerator {
 	 * @param puzzle  the puzzle whose fitness is to be calculated
 	 * @return a double representing the fitness of the puzzle
 	 */
-	private static double calcFitness(ShinroPuzzle puzzle) {
-		double fitness = 0;
+	private static Fitness calcFitness(ShinroPuzzle puzzle) {
+		Fitness fitness = new Fitness();
 		ShinroPuzzle toSolve = puzzle.clone();
 		ShinroSolver solver = new ShinroSolver(toSolve);
-		int numMoves[] = solver.solve();
+		fitness.solverInfo = solver.solve();
 		
-		fitness = epsilon(puzzle, numMoves[0]); //total num moves 
-		fitness *= 1 - (1 / (1 + numMoves[difficultyFactor]));
+		fitness.value = epsilon(puzzle, fitness.solverInfo);
+		fitness.value *= 1 - (1 / (1 + fitness.solverInfo[difficultyFactor]));
 		
 		if (cluster) {
-			fitness *= (1 - (1 / (1 + calcClustering(puzzle))));
+			fitness.value *= (1 - (1 / (1 + calcClustering(puzzle))));
 		}
 		
 		return fitness;
@@ -211,6 +229,7 @@ public class ShinroGenerator {
 	 * @param puzzle  the puzzle whose nonsymmetrical spaces are to be counted
 	 * @return the number of nonsymmetrical spaces in the puzzle
 	 */
+	/*
 	private static int countNonsymmetrical(ShinroPuzzle puzzle) {
 		int violations = 0;
 		
@@ -239,6 +258,7 @@ public class ShinroGenerator {
 		
 		return violations;
 	}
+	*/
 	
 	/**
 	 * Calculates the normalized error count of a specific puzzle
@@ -246,18 +266,19 @@ public class ShinroGenerator {
 	 * @param totalMoves  the total number of moves it took to solve the puzzle
 	 * @return a double representing the normalized error count of the puzzle
 	 */
-	private static double epsilon(ShinroPuzzle puzzle, int totalMoves) {
+	private static double epsilon(ShinroPuzzle puzzle, int[] solverInfo) {
 		double denominator = 
 				1.0
 				+ Math.abs(NUMPOINTS 
 						- puzzle.getListByType(ShinroPuzzle.POINT).size())
 				+ countPointlessArrows(puzzle)
-				+ Math.abs((minMoves) - totalMoves);
-		if (symmetry) {
+				+ Math.abs((minMoves) - solverInfo[0])
+				+ Math.abs(minOfDifficultyFactor - solverInfo[difficultyFactor]);
+		/*if (symmetry) {
 			denominator += countNonsymmetrical(puzzle);
-		}
+		}*/
 				
-		return 1.0 / denominator;				
+		return 1.0 / denominator;
 	}
 	
 	/**
@@ -265,21 +286,26 @@ public class ShinroGenerator {
 	 * <p>
 	 * This method prints occasional status messages to the console in order to
 	 * communicate progress.
-	 * If the algorithm continues until MAXNOIMPROVMENT generations pass without any
-	 * change in the puzzle's fitness. If the best-generated puzzle is invalid, the
-	 * algorithm will continue until a valid puzzle is generated.
+	 * The algorithm continues until MAXNOIMPROVMENT generations pass without any
+	 * change in the puzzle's fitness or the algorithm exceeds MAXGENERATIONS while
+	 * the fitness value is less than MINFITNESS. If the best-generated puzzle is 
+	 * invalid, the algorithm will continue until a valid puzzle is generated.
 	 * @see #printStatsWritePuzzle(ShinroPuzzle, int, double)
 	 * @return the generated puzzle
 	 */
 	public static ShinroPuzzle generatePuzzle() {
 		ShinroPuzzle[] population = initPopulation();
 		ShinroPuzzle elite = new ShinroPuzzle();
-		double prevFitness = 0.0, newFitness = 0.0;
+		Fitness prevFitness, newFitness;
 		int noImprovementCount = 0, numGenerations = 0;
+		
+		prevFitness = new Fitness();
+		newFitness = new Fitness();
 		
 		System.out.println("Generating puzzle...");
 		System.out.println("Target moves: " + minMoves + ", Target difficulty: "
-				+ difficultyFactor);
+				+ difficultyFactor + ", Target # of diffFactor moves: " 
+				+ minOfDifficultyFactor);
 		
 		while (true) {
 			prevFitness = newFitness;
@@ -289,22 +315,45 @@ public class ShinroGenerator {
 			newFitness = calcFitness(elite);
 			
 			//Terminating conditions
-			if (noImprovementCount > maxNoImprovement || newFitness == 1.0) {
+			if (noImprovementCount > maxNoImprovement 
+					|| newFitness.value == 1.0) {
 				//if the puzzle is invalid
-				if (newFitness == 0.0 
-						|| elite.getListByType(ShinroPuzzle.POINT).size() != NUMPOINTS 
-						|| (symmetry && countNonsymmetrical(elite) > 0)) {
-					System.out.print("Invalid puzzle: continuing because ");
-					if (newFitness == 0.0) {
+				if (newFitness.value == 0.0 
+						|| (elite.getListByType(ShinroPuzzle.POINT).size() 
+								!= NUMPOINTS)
+						|| (countPointlessArrows(elite) > 0)
+						//|| (symmetry && countNonsymmetrical(elite) > 0)
+						|| (newFitness.solverInfo[newFitness.solverInfo.length - 1]
+								== 0)) {
+					System.out.print("Invalid puzzle: ");
+					if (newFitness.value == 0.0) {
 						System.out.print("of zero fitness.");
 					}
 					else if (elite.getListByType(ShinroPuzzle.POINT).size() 
 							!= NUMPOINTS) {
-						System.out.print("there aren't the right number of points.");
+						System.out.print("continuing because there aren't the right "
+								+ "number of points.");
 					}
-					else if (symmetry && countNonsymmetrical(elite) > 0) {
-						System.out.print("of lack of required symmetry.");
-					}					
+					else if (countPointlessArrows(elite) > 0) {
+						System.out.print("continuing because there are pointless "
+								+ "arrows.");
+					}
+					/*else if (symmetry && countNonsymmetrical(elite) > 0) {
+						System.out.print("continuing because of lack of required "
+								+ "symmetry.");
+					}*/
+					else if (newFitness.solverInfo[newFitness.solverInfo.length - 1]
+							== 0 && newFitness.value < MINFITNESS) {
+						System.out.print("the puzzle generated is not solvable.");
+						
+					}
+					else if (newFitness.solverInfo[newFitness.solverInfo.length - 1]
+							== 0 && newFitness.value == 1.0) {
+						System.out.print("the puzzle generated was not solvable. "
+								+ "Terminating.");
+						System.exit(1);
+						
+					}
 					System.out.print("\n");
 					//Adjust the count; consider updating this to be by some function
 					noImprovementCount /= 2;
@@ -313,12 +362,12 @@ public class ShinroGenerator {
 				break; //terminate algorithm
 			}
 			//Update to approach termination
-			if (prevFitness == newFitness) {
+			if (prevFitness.value == newFitness.value) {
 				noImprovementCount++;
 			}
 			else {
 				noImprovementCount = 0;
-				System.out.println("Fitness: " + newFitness);
+				System.out.println("Fitness: " + newFitness.value);
 			}
 		}
 		
@@ -335,11 +384,13 @@ public class ShinroGenerator {
 	 */
 	private static ShinroPuzzle getElite(ShinroPuzzle[] population) {
 		ShinroPuzzle elite = population[0];
-		double currentFitness = 0, bestFitness = 0;
+		Fitness currentFitness, bestFitness;
+		currentFitness = new Fitness();
+		bestFitness = new Fitness();
 		
 		for (int i = 0; i < population.length; i++) {
 			currentFitness = calcFitness(population[i]);
-			if (currentFitness > bestFitness) {
+			if (currentFitness.value > bestFitness.value) {
 				bestFitness = currentFitness;
 				elite = population[i];
 			}
@@ -394,7 +445,16 @@ public class ShinroGenerator {
 		if (RANDOMIZEALL) {
 			Random rand = new Random();
 			minMoves = rand.nextInt(MOSTMOVES - LEASTMOVES) + LEASTMOVES;
-			difficultyFactor = rand.nextInt(7 - LEASTDIFFICULTY) + LEASTDIFFICULTY;
+			difficultyFactor = rand.nextInt((ShinroSolver.ARRAYSIZE - 1) //7 diffs 
+					- LEASTDIFFICULTY) + LEASTDIFFICULTY;
+			if (difficultyFactor > 4) {
+				minOfDifficultyFactor = rand.nextInt((MINOFDIFFICULTYCAP - 1) + 1) 
+						+ 1;
+			}
+		}
+		
+		if (difficultyFactor > 4) {
+			maxNoImprovement = 1000;
 		}
 		
 		generatePuzzle();
@@ -418,11 +478,12 @@ public class ShinroGenerator {
 	 * nonsymmetrical arrows are removed.
 	 * The mutations are as follows:
 	 * <ul>
-	 * <li> Iterate through the puzzle and probabilistically mutate spaces
+	 * <li> Iterate through the puzzle and probabilistically mutate spaces. This is
+	 * currently disabled because it doesn't seem helpful
 	 * <li> Randomly swap up to three pairs of spaces
 	 * <li> Add an random arrow to a random space
 	 * <li> Delete an arrow from a random space
-	 * <li> Add a point to a random space
+	 * <li> Add a point to a random space (and up to three pointing arrows)
 	 * <li> Delete a point from a random space
 	 * </ul>
 	 * @param puzzle  the puzzle to mutate
@@ -431,7 +492,7 @@ public class ShinroGenerator {
 	private static ShinroPuzzle mutate(ShinroPuzzle puzzle) {
 		Random rand = new Random();
 		ShinroPuzzle mutated = puzzle.clone();
-		int mutation = rand.nextInt(6); //six possibilities (0 to 5)
+		int mutation = rand.nextInt(6);//((6 - 1) + 1) + 1); //skip mutation 0 //six possibilities (0 to 5)
 
 		if (mutation == 0) {
 			//iterate through the puzzle and probabilistically mutate spaces
@@ -442,7 +503,7 @@ public class ShinroGenerator {
 					if (r <= rate) {
 						switch (rand.nextInt(3)) {
 						case 0: mutated.setPos(i, j, ShinroPuzzle.EMPTY);
-								if (symmetry) {
+								/*if (symmetry) {
 									if (xAxis) {
 										mutated.setPos(mirror(i), j, 
 												ShinroPuzzle.EMPTY);
@@ -455,10 +516,10 @@ public class ShinroGenerator {
 										mutated.setPos(mirror(i), mirror(j),
 												ShinroPuzzle.EMPTY);
 									}
-								}
+								}*/
 								break;
 						case 1: mutated.setPos(i, j, ShinroPuzzle.POINT);
-								if (symmetry) {
+								/*if (symmetry) {
 									if (xAxis) {
 										mutated.setPos(mirror(i), j, 
 												ShinroPuzzle.POINT);
@@ -471,11 +532,11 @@ public class ShinroGenerator {
 										mutated.setPos(mirror(i), mirror(j),
 												ShinroPuzzle.POINT);
 									}
-								}
+								}*/
 								break;
 						case 2: int randArrow = rand.nextInt(9 - 1) + 1;
 								mutated.putArrow(i, j, randArrow);
-								if (symmetry) {
+								/*if (symmetry) {
 									if (xAxis) {
 										mutated.setPos(mirror(i), j, randArrow);
 									}
@@ -486,7 +547,7 @@ public class ShinroGenerator {
 										mutated.setPos(mirror(i), mirror(j),
 												randArrow);
 									}
-								}
+								}*/
 								break;
 						default:break;
 						}
@@ -494,7 +555,7 @@ public class ShinroGenerator {
 				}
 			}
 		}
-		else if (mutation == 1) { //nonsymmetrical
+		else if (mutation == 1) {
 			//randomly swap up to three pairs of spaces
 			int numTimes = rand.nextInt(3); //up to three times
 			for (int i = 0; i < numTimes; i++) {
@@ -506,7 +567,7 @@ public class ShinroGenerator {
 				mutated.setPos(randRow1, randCol1,
 						mutated.atPos(randRow2, randCol2));
 				mutated.setPos(randRow2, randCol2, temp);
-				if (symmetry) {
+				/*if (symmetry) {
 					if (xAxis) {
 						temp = mutated.atPos(mirror(randRow1), randCol1);
 						mutated.setPos(mirror(randRow1), randCol1,
@@ -525,7 +586,7 @@ public class ShinroGenerator {
 								mutated.atPos(mirror(randRow2), mirror(randCol2)));
 						mutated.setPos(mirror(randRow2), mirror(randCol2), temp);
 					}
-				}
+				}*/
 			}			
 		}
 		else if (mutation == 2) {
@@ -534,7 +595,7 @@ public class ShinroGenerator {
 			int randCol = rand.nextInt(PUZZSIZE);
 			int randArrow = rand.nextInt(9 - 1) + 1; //1 to 8
 			mutated.setPos(randRow, randCol, randArrow);
-			if (symmetry) {
+			/*if (symmetry) {
 				if (xAxis) {
 					mutated.setPos(mirror(randRow),	randCol, randArrow);
 				}
@@ -544,18 +605,22 @@ public class ShinroGenerator {
 				else if (rotational) {
 					mutated.setPos(mirror(randRow),	mirror(randCol), randArrow);
 				}
-			}
+			}*/
 		}
 		else if (mutation == 3) {
-			//delete a random arrow
-			ArrayList<GridPos> arrows = 
-					mutated.getListByType(ShinroPuzzle.N); //all arrows
-			if (arrows.size() == 0) {
-				return mutate(puzzle);
+			//delete up to three random arrows
+			int numTimes = rand.nextInt(3 + 1);
+			for (int i = 0; i < numTimes; i++) {
+				ArrayList<GridPos> arrows = 
+						mutated.getListByType(ShinroPuzzle.N); //all arrows
+				if (arrows.size() == 0) {
+					return mutate(puzzle);
+				}
+				GridPos which = arrows.get(rand.nextInt(arrows.size()));
+				mutated.setPos(which, ShinroPuzzle.EMPTY);
 			}
-			GridPos which = arrows.get(rand.nextInt(arrows.size()));
-			mutated.setPos(which, ShinroPuzzle.EMPTY);
-			if (symmetry) {
+			
+			/*if (symmetry) {
 				if (xAxis) {
 					mutated.setPos(mirror(which.getRow()),	which.getCol(),
 							ShinroPuzzle.EMPTY);
@@ -568,14 +633,38 @@ public class ShinroGenerator {
 					mutated.setPos(mirror(which.getRow()), mirror(which.getCol()),
 							ShinroPuzzle.EMPTY);
 				}
-			}
+			}*/
 		}
+		else if (mutation == 4) {
+			//add a POINT to a random space and up to three pointing arrows
+			int randRow = rand.nextInt(PUZZSIZE);
+			int randCol = rand.nextInt(PUZZSIZE);
+			mutated.setPos(randRow, randCol, ShinroPuzzle.POINT);
+			
+			int numArrows = rand.nextInt(3 + 1);
+			for (int i = 0; i < numArrows; i++) {
+				//pick a random direction
+				int randDir = rand.nextInt((8 - 1) + 1) + 1;
+				ArrayList<GridPos> empties = mutated.getTypeInList(
+						ShinroPuzzle.EMPTY, mutated.getSpacesToEdge(randRow,
+						randCol, randDir));
+				if (empties.size() > 0) {
+					int randSpace = rand.nextInt(empties.size());
+					mutated.setPos(empties.get(randSpace), 
+							mutated.getOpposingArrow(randDir));
+					
+				}
+			}
+			
+		}
+		//OLD VERSION below
+		/*
 		else if (mutation == 4) {
 			//add a POINT to a random space
 			int randRow = rand.nextInt(PUZZSIZE);
 			int randCol = rand.nextInt(PUZZSIZE);
 			mutated.setPos(randRow, randCol, ShinroPuzzle.POINT);
-			if (symmetry) {
+			/*if (symmetry) {
 				if (xAxis) {
 					mutated.setPos(mirror(randRow), randCol, ShinroPuzzle.POINT);
 				}
@@ -586,8 +675,8 @@ public class ShinroGenerator {
 					mutated.setPos(mirror(randRow),	mirror(randCol),
 							ShinroPuzzle.POINT);
 				}
-			}
-		}
+			}*/ /*
+		}*/
 		else if (mutation == 5) {
 			//delete a random POINT
 			ArrayList<GridPos> points = puzzle.getListByType(ShinroPuzzle.POINT);
@@ -596,7 +685,7 @@ public class ShinroGenerator {
 			}
 			GridPos which = points.get(rand.nextInt(points.size()));
 			mutated.setPos(which, ShinroPuzzle.EMPTY);
-			if (symmetry) {
+			/*if (symmetry) {
 				if (xAxis) {
 					mutated.setPos(mirror(which.getRow()),	which.getCol(),
 							ShinroPuzzle.EMPTY);
@@ -609,13 +698,13 @@ public class ShinroGenerator {
 					mutated.setPos(mirror(which.getRow()), mirror(which.getCol()),
 							ShinroPuzzle.EMPTY);
 				}
-			}
+			}*/
 		}
 		mutated.setHeaders();
-		removePointlessArrows(mutated);
-		if (symmetry) {
+		removePointlessArrows(mutated); //maybe these will generate better
+		/*if (symmetry) {
 			removeNonsymmetrical(mutated);
-		}
+		}*/
 		return mutated;
 	}
 	
@@ -637,7 +726,7 @@ public class ShinroGenerator {
 		double r = Math.random(); //instantaneous rate for comparison
 		
 		//randomly enforce symmetry
-		if (!symmetry && r <= SYMMETRYRATE) {
+		/*if (!symmetry && r <= SYMMETRYRATE) {
 			System.out.print("Enforcing symmetry: ");
 			symmetry = true;
 			switch (rand.nextInt(3)) {
@@ -666,7 +755,7 @@ public class ShinroGenerator {
 			else {
 				System.out.print("of points.\n");
 			}
-		}
+		}*/
 
 		nextGen[0] = getElite(population);		
 		for (int i = 1; i < nextGen.length; i++) {		
@@ -695,15 +784,15 @@ public class ShinroGenerator {
 	 * @param fitness the final fitness of the puzzle when generated
 	 */
 	private static void printStatsWritePuzzle(ShinroPuzzle puzzle, 
-			int numGens, double fitness) {
+			int numGens, Fitness fitness) {
 		String fileString = "shinro_";
 		
 		System.out.println("\n" + puzzle);
-		System.out.println("Min moves: " + minMoves + ", difficulty factor: "
-				+ difficultyFactor);
+		System.out.println("Min moves: " + minMoves + ", Difficulty factor: "
+				+ difficultyFactor + ", Target Diff Moves: " + minOfDifficultyFactor);
 		System.out.println("Total generations: " + numGens);
 		fileString += String.format("%dg_", numGens);
-		if (symmetry) {
+		/*if (symmetry) {
 			System.out.print("Symmetry: ");
 			if (xAxis) {
 				System.out.print("X Axis");
@@ -733,16 +822,14 @@ public class ShinroGenerator {
 		}
 		if (symmetry || cluster) {
 			fileString += "_";
-		}
-		System.out.println("Final fitness: " + fitness);
-		fileString += String.format("%03df_", (int)(fitness * 100));
+		}*/
+		System.out.println("Final fitness: " + fitness.value);
+		fileString += String.format("%03df_", (int)(fitness.value * 100));
 		
 		System.out.print("Solver info: ");
-		ShinroPuzzle puzzleCopy = puzzle.clone();
-		ShinroSolver ss = new ShinroSolver(puzzleCopy);
-		for (Integer i : ss.solve()) {
-			System.out.print(i + " ");
-			fileString += i;
+		for (int i = 0; i < (fitness.solverInfo.length - 1); i++) {
+			System.out.print(fitness.solverInfo[i] + " ");
+			fileString += fitness.solverInfo[i];
 		}
 		System.out.println();
 		
@@ -755,7 +842,6 @@ public class ShinroGenerator {
 				for (int j = 0; j < PUZZSIZE; j++) {
 					out.print(puzzleInts[i][j] + " ");
 				}
-				out.println();
 			}
 			System.out.println("File '" + fileString + "' created successfully.");
 			out.close();
@@ -773,6 +859,7 @@ public class ShinroGenerator {
 	 * parameter is currently set to true.
 	 * @param puzzle  the puzzle whose nonsymmetrical spaces are to be removed
 	 */
+	/*
 	private static void removeNonsymmetrical(ShinroPuzzle puzzle) {		
 		for (int row = 0; row < PUZZSIZE; row++) {
 			for (int col = 0; col < PUZZSIZE; col++) {
@@ -788,6 +875,7 @@ public class ShinroGenerator {
 			}
 		}
 	}
+	*/
 	
 	/**
 	 * Removes the pointless arrows from a given puzzle

@@ -344,6 +344,25 @@ public class ShinroPuzzle implements Cloneable{
 		return this.numPoints;
 	}
 	
+	
+	/**
+	 * Gets the opposing arrow of its parameter
+	 * @param arrow  the arrow value to get the opposite of
+	 * @return the opposing arrow value
+	 * @throws IllegalArgumentException if not a valid arrow or a "satisfied" arrow 
+	 */
+	public int getOpposingArrow(int arrow) throws IllegalArgumentException {
+		if (!this.isArrow(arrow) || arrow < 0) {
+			throw new IllegalArgumentException("getOpposingArrow: Invalid arrow");
+		}
+		if (arrow <= 4) {
+			return arrow + 4;
+		}
+		else {
+			return arrow - 4;
+		}
+	}
+	
 	/**
 	 * GridPos-based convenience method for {@link #getPointingArrows(int, int)}
 	 * @param pos the GridPos of the desired location
@@ -444,6 +463,59 @@ public class ShinroPuzzle implements Cloneable{
 	 */
 	public int getRowHeaderNum(int row) {
 		return this.rowHeaderNum[row];
+	}
+	
+	/**
+	 * Gets all the spaces from a given space to the edge of the puzzle along a
+	 * given direction
+	 * @param row  the row index of the space to start with
+	 * @param col  the column index of the space to start with
+	 * @param dir  the direction to collect spaces in
+	 * @return an ArrayList of GridPos of all the spaces from the starting space to
+	 * the edge of the puzzle in the specified direction
+	 */
+	public ArrayList<GridPos> getSpacesToEdge(int row, int col, int dir) {
+		ArrayList<GridPos> result = new ArrayList<GridPos>();
+		int mRow = row, mCol = col, mDir = dir;
+		if (mDir < 0) {
+			mDir *= -1;
+		}
+		while ((mRow >= 0 && mRow < SIZE) && (mCol >= 0 && mCol < SIZE)) {
+			result.add(new GridPos(mRow, mCol));
+			switch (mDir) {
+			case N: mRow--;
+					break;
+			case S: mRow++;
+					break;
+			case E: mCol++;
+					break;
+			case W: mCol--;
+					break;
+			case NE: mRow--;
+					 mCol++;
+					 break;
+			case NW: mRow--;
+					 mCol--;
+					 break;
+			case SE: mRow++;
+					 mCol++;
+					 break;
+			case SW: mRow++;
+					 mCol--;
+					 break;
+			}
+		}
+		return result;
+	}
+	
+	/** GridPos-based convenience method for {@link #getSpacesToEdge(int, int, int)}
+	 * @param pos  the GridPos of the space to start at
+	 * @param dir  the direction to collect spaces in
+	 * @return an ArrayList of GridPos of all the spaces from the starting space to
+	 * the edge of the puzzle in the specified direction
+	 */
+	public ArrayList<GridPos> getSpacesToEdge(GridPos pos, int dir) {
+		return this.getSpacesToEdge(pos.getRow(), pos.getCol(), dir);
 	}
 	
 	/**
@@ -639,6 +711,19 @@ public class ShinroPuzzle implements Cloneable{
 	public void putX(int row, int col) {
 		if (!this.isArrow(row, col) && this.atPos(row, col) != POINT) {
 			this.puzzleGrid[row][col] = X;
+		}
+	}
+	
+	/**
+	 * Checks to see whether or not the puzzleGrid is full
+	 * @return true if the puzzle grid has no more empty spaces
+	 */
+	public boolean puzzleGridFull() {
+		if (this.getListByType(EMPTY).size() == 0) {
+			return true;
+		}
+		else {
+			return false;
 		}
 	}
 	
