@@ -39,9 +39,9 @@ import shinro.ShinroSolver;
  */
 public class ShinroGenerator {
 	// general generator parameters
-	private static int minMoves = 32;		
-	private static int difficultyFactor = 5;
-	private static int minOfDifficulty = 1;
+	private static int minMoves = 30;		
+	private static int difficultyFactor = 3;
+	private static int minOfDifficulty = 8;
 	
 	private static int maxNoImprovement = 500; //should make this some function	
 	private static final double MINFITNESS = 0.75;
@@ -49,20 +49,17 @@ public class ShinroGenerator {
 	//private static boolean symmetry = false;      //DISABLED
 	//private static boolean xAxis = false;			//
 	//private static boolean yAxis = false;			//
-	//private static boolean rotational = false;	//
-	
-	private static boolean cluster = false;
-	private static boolean clusterArrows = false;
-	
-	//fitness function parameters
-	
+	//private static boolean rotational = false;	//	
+	//private static boolean cluster = false;		//
+	//private static boolean clusterArrows = false;	//
 	
 	//automation constants
 	private static final boolean RANDOMIZEALL = false;
-	private static final int LEASTMOVES = 18;
+	private static final boolean RANDOMIZEMOVES = true;
+	private static final int LEASTMOVES = 25;
 	private static final int MOSTMOVES = 35;
 	private static final int LEASTDIFFICULTY = 4; //oneToPlace moves
-	private static final int MINOFDIFFICULTYCAP = 4;
+	private static final int MINOFDIFFICULTYCAP = 8;
 	
 	//constraint constants
 	private static final int POPULATIONSIZE = 10;
@@ -94,6 +91,7 @@ public class ShinroGenerator {
 	 * @param puzzle  the puzzle whose clustering value is to be calculated
 	 * @return a double representing the clustering function value for the puzzle
 	 */
+	/*
 	private static double calcClustering(ShinroPuzzle puzzle) {
 		double clustering = 0.0;
 		ArrayList<GridPos> items = new ArrayList<GridPos>();
@@ -108,6 +106,7 @@ public class ShinroGenerator {
 		}		
 		return clustering;
 	}
+	*/
 	
 	/**
 	 * Calculates the fitness of a ShinroPuzzle based on the selection parameters
@@ -127,9 +126,9 @@ public class ShinroGenerator {
 		fitness.value = epsilon(puzzle, fitness.solverInfo);
 		fitness.value *= 1 - (1 / (1 + fitness.solverInfo[difficultyFactor]));
 		
-		if (cluster) {
+		/*if (cluster) {
 			fitness.value *= (1 - (1 / (1 + calcClustering(puzzle))));
-		}
+		}*/
 		
 		return fitness;
 	}
@@ -145,6 +144,7 @@ public class ShinroGenerator {
 	 * @param puzzle  the puzzle in which the item is an element
 	 * @return a double representing the per-item clustering for the specified item
 	 */
+	/*
 	private static double calcItemClustering(GridPos item, ShinroPuzzle puzzle) {
 		double itemClustering = 0.0;
 		int itemRow = item.getRow(), itemCol = item.getCol();
@@ -164,12 +164,12 @@ public class ShinroGenerator {
 			col = itemCol - 1;
 		}
 		
-		for (/*nothing*/; row <= (itemRow + 1); row++) {
+		for (; row <= (itemRow + 1); row++) { //blank initializer
 			//quit if out of bounds -- rows
 			if (row >= PUZZSIZE) {
 				break;
 			}						
-			for (/*nothing*/; col <= (itemCol + 1); col++) {
+			for (; col <= (itemCol + 1); col++) { //blank initializer
 				//quit if out of bounds -- columns
 				if (col >= PUZZSIZE) {
 					break;
@@ -203,6 +203,7 @@ public class ShinroGenerator {
 		
 		return itemClustering;
 	}
+	*/
 	
 	/**
 	 * Counts the number of pointless arrows in a given puzzle
@@ -443,8 +444,8 @@ public class ShinroGenerator {
 	}
 	
 	public static void main(String[] args) {
-		if (RANDOMIZEALL) {
-			Random rand = new Random();
+		Random rand = new Random();
+		if (RANDOMIZEALL) {			
 			minMoves = rand.nextInt(MOSTMOVES - LEASTMOVES) + LEASTMOVES;
 			difficultyFactor = rand.nextInt((ShinroSolver.ARRAYSIZE - 1) //7 diffs 
 					- LEASTDIFFICULTY) + LEASTDIFFICULTY;
@@ -452,6 +453,9 @@ public class ShinroGenerator {
 				minOfDifficulty = rand.nextInt((MINOFDIFFICULTYCAP - 1) + 1) 
 						+ 1;
 			}
+		}
+		else if (RANDOMIZEMOVES) {
+			minMoves = rand.nextInt(MOSTMOVES - LEASTMOVES) + LEASTMOVES;
 		}
 		
 		if (difficultyFactor > 4) {
