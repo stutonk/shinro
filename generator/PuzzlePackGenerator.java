@@ -33,7 +33,7 @@ import shinro.ShinroSolver;
  */
 public class PuzzlePackGenerator {
 	
-	private static final String PACKPREFIX = "puzzlePack_";
+	private static final String PACKPREFIX = "pack";
 	private static String packName = "Default Pack";
 	
 	/* This is just a one-shot inner class for facilitating the ease of sorting
@@ -80,6 +80,7 @@ public class PuzzlePackGenerator {
 		}
 		System.out.println("Creating puzzle pack '" + packName + "'");
 		String filename = PACKPREFIX + packName.replaceAll("\\p{Z}","");
+		filename = filename.toLowerCase(); //Android needs lowercase
 		
 		try {
 			File dir = new File("."); //The directory the program is in
