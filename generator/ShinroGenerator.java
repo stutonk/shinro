@@ -40,8 +40,8 @@ import shinro.ShinroSolver;
 public class ShinroGenerator {
 	// general generator parameters
 	private static int minMoves = 30;		
-	private static int difficultyFactor = 3;
-	private static int minOfDifficulty = 8;
+	private static int difficultyFactor = 6;
+	private static int minOfDifficulty = 4;
 	
 	private static int maxNoImprovement = 500; //should make this some function	
 	private static final double MINFITNESS = 0.75;

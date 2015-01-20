@@ -20,11 +20,11 @@ import shinro.ShinroSolver;
  * The pack has the format:
  * PACKNAME
  * numPuzzles: k
- * p# 1
+ * Puzzle 1
  * difficulty: d
  * 0 0 0 0 0 0 0 0... 
  * ...
- * p# n
+ * Puzzle n
  * difficulty: d(sub n)
  * 0 0 0 0 0 0 0 0...
  * 
@@ -33,6 +33,7 @@ import shinro.ShinroSolver;
  */
 public class PuzzlePackGenerator {
 	
+	private static final String PACKPREFIX = "puzzlePack_";
 	private static String packName = "Default Pack";
 	
 	/* This is just a one-shot inner class for facilitating the ease of sorting
@@ -78,7 +79,7 @@ public class PuzzlePackGenerator {
 			packName = packName.trim();
 		}
 		System.out.println("Creating puzzle pack '" + packName + "'");
-		String filename = packName.replaceAll("\\p{Z}","");
+		String filename = PACKPREFIX + packName.replaceAll("\\p{Z}","");
 		
 		try {
 			File dir = new File("."); //The directory the program is in
@@ -165,8 +166,8 @@ public class PuzzlePackGenerator {
 		    
 		    int puzzleCount = 1;
 		    for (PuzzleInfo puzzle : packPuzzles) {
-		    	writer.println("p# " + puzzleCount++); //increments puzzleCount
-		    	writer.println("difficulty: " + puzzle.difficulty);
+		    	writer.println("Puzzle " + puzzleCount++); //increments puzzleCount
+		    	writer.println("difficulty " + puzzle.difficulty);
 		    	writer.println(puzzle.puzzleString);
 		    }
 			
